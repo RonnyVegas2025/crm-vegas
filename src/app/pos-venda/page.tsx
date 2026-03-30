@@ -39,18 +39,18 @@ const SC: Record<string,{label:string;icon:string;cor:string;bg:string;border:st
 const SA: Record<string,string> = {contato:'visita_realizada',ausente:'ligar',problema:'problema',expansao:'em_negociacao'}
 const PO = ['ativo','visita_realizada','em_negociacao','ligar','retornar','proposta_enviada','problema','sem_contato','fechado']
 const PRODS = [
-  {id:1, nome:'Alimentação',       icon:'🍽',cat:'Benefícios',custo:0,   desc:'Cartão benefício alimentação PAT'},
-  {id:2, nome:'Refeição',          icon:'🥘',cat:'Benefícios',custo:0,   desc:'Cartão refeição PAT'},
-  {id:3, nome:'Aux. Farmácia',     icon:'💊',cat:'Benefícios',custo:0,   desc:'Auxílio farmácia para colaboradores'},
-  {id:4, nome:'Aux. Combustível',  icon:'⛽',cat:'Benefícios',custo:0,   desc:'Vale combustível'},
-  {id:5, nome:'Farmácia Convênio', icon:'🏥',cat:'Convênio',  custo:0,   desc:'Rede credenciada de farmácias'},
-  {id:6, nome:'Day Bank',          icon:'🏦',cat:'Convênio',  custo:0,   desc:'Conta digital para colaboradores'},
-  {id:7, nome:'Combustível Frota', icon:'🚛',cat:'Convênio',  custo:0,   desc:'Gestão de abastecimento de frota'},
-  {id:8, nome:'WellHub',           icon:'🏋',cat:'Agregado',  custo:7.99,desc:'Bem-estar — R$4,99 a R$11,99/vida'},
-  {id:9, nome:'Total Pass',        icon:'🎯',cat:'Agregado',  custo:5.85,desc:'Academias — R$5,85/vida'},
-  {id:10,nome:'Telemedicina',      icon:'🩺',cat:'Agregado',  custo:2.50,desc:'Consultas online — R$2,50/vida'},
-  {id:11,nome:'Vidalink R$50',     icon:'💊',cat:'Agregado',  custo:5.45,desc:'Aux. farmácia R$50 — R$5,45/vida'},
-  {id:12,nome:'Seguro MAC+Auto',   icon:'🚗',cat:'Agregado',  custo:1.05,desc:'Seguro vida+auto — R$1,05/vida'},
+  {id:1, nome:'Alimentação',       icon:'🍽',cat:'Benefícios',custo:0,   desc:'Benefício alimentação'},
+  {id:2, nome:'Refeição',          icon:'🥘',cat:'Benefícios',custo:0,   desc:'Benefício refeição'},
+  {id:3, nome:'Aux. Farmácia',     icon:'💊',cat:'Benefícios',custo:0,   desc:'Aux. farmácia'},
+  {id:4, nome:'Aux. Combustível',  icon:'⛽',cat:'Benefícios',custo:0,   desc:'Aux. combustível'},
+  {id:5, nome:'Farmácia Convênio', icon:'🏥',cat:'Convênio',  custo:0,   desc:'Convênio farmácias'},
+  {id:6, nome:'Day Bank',          icon:'🏦',cat:'Convênio',  custo:0,   desc:'Conta digital'},
+  {id:7, nome:'Combustível Frota', icon:'🚛',cat:'Convênio',  custo:0,   desc:'Gestão de frota'},
+  {id:8, nome:'WellHub',           icon:'🏋',cat:'Agregado',  custo:7.99,desc:'Plataforma de bem-estar e academia'},
+  {id:9, nome:'Total Pass',        icon:'🎯',cat:'Agregado',  custo:5.85,desc:'Acesso a academias e esportes'},
+  {id:10,nome:'Telemedicina',      icon:'🩺',cat:'Agregado',  custo:2.50,desc:'Consultas médicas online'},
+  {id:11,nome:'Vidalink R$50',     icon:'💊',cat:'Agregado',  custo:5.45,desc:'Auxílio farmácia R$50/mês'},
+  {id:12,nome:'Seguro MAC+Auto',   icon:'🚗',cat:'Agregado',  custo:1.05,desc:'Seguro de vida + automóvel'},
 ]
 function cd(la1:number,lo1:number,la2:number,lo2:number){const R=6371000,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
 function fd(m:number){return m<1000?`${Math.round(m)}m`:`${(m/1000).toFixed(1)}km`}
@@ -215,7 +215,7 @@ export default function PosVendaPage(){
                       <div style={{display:'flex',alignItems:'center',gap:7,marginTop:7,flexWrap:'wrap'}}>
                         <span style={{background:st.bg,color:st.cor,border:`1px solid ${st.border}`,fontSize:10.5,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{st.icon} {st.label}</span>
                         {vt&&<span style={{background:'#f0fdf4',color:'#16a34a',fontSize:10.5,fontWeight:700,padding:'2px 8px',borderRadius:20}}>✓ {vt.hora}</span>}
-                        {du>30&&<span style={{background:'#fef2f2',color:'#dc2626',fontSize:10.5,fontWeight:700,padding:'2px 8px',borderRadius:20}}>⚠ +{du}d</span>}
+                        
                         {c.distancia!=null&&<span style={{fontSize:11,color:'#2563eb',fontWeight:600}}>📍 {fd(c.distancia)}</span>}
                         <span style={{fontSize:11,color:'#6b7280',fontWeight:600,marginLeft:'auto'}}>Taxa: {c.taxa}%</span>
                       </div>
@@ -353,7 +353,7 @@ export default function PosVendaPage(){
                     <div style={{fontSize:12,fontWeight:800,color:'#92400e',marginBottom:8}}>🔥 Combo Personalizado</div>
                     {nomBen.length>0&&<div style={{fontSize:12,color:'#374151',marginBottom:4}}><b>Benefícios:</b> {nomBen.join(', ')}</div>}
                     {cusAgg>0&&<div style={{fontSize:12,color:'#374151',marginBottom:4}}><b>Agregados:</b> {combo.filter(p=>p.custo>0).map(p=>p.nome).join(' + ')}</div>}
-                    {cusAgg>0&&<div style={{fontSize:13,fontWeight:800,color:'#d97706',marginTop:6}}>Custo estimado: R${cusAgg.toFixed(2).replace('.',',')}/vida/mês</div>}
+                    
                   </div>
                 )}
               </div>
