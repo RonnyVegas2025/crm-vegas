@@ -18,12 +18,7 @@ interface Visita {
   nome_fantasia: string; resultado: string; observacao: string
   latitude: number|null; longitude: number|null; hora: string; tipo_origem?: string
 }
-interface NegociacaoProduto {
-  produto_id: number
-  total_func: string
-  valor_licenca: string
-  valor_total: string
-}
+interface NegItem { valor: string; obs: string }
 
 const CAT: Record<string,{icon:string;cor:string;bg:string}> = {
   supermercado:{icon:'🛒',cor:'#2563eb',bg:'#eff6ff'},
@@ -33,43 +28,59 @@ const CAT: Record<string,{icon:string;cor:string;bg:string}> = {
   varejo:{icon:'🛍',cor:'#d97706',bg:'#fffbeb'},
   outros:{icon:'🏪',cor:'#6b7280',bg:'#f4f5f7'},
 }
+
+// Cor do pin no mapa por status — pós-venda sem ação = AZUL
+const STATUS_COR: Record<string,string> = {
+  ativo:'#2563eb',           // azul — sem ação ainda
+  novo_lead:'#8b5cf6',       // roxo
+  visita_realizada:'#0891b2',// ciano
+  em_negociacao:'#d97706',   // âmbar
+  ligar:'#7c3aed',           // violeta
+  retornar:'#06b6d4',        // turquesa
+  proposta_enviada:'#ea580c',// laranja
+  problema:'#dc2626',        // vermelho
+  sem_contato:'#64748b',     // cinza
+  fechado:'#16a34a',         // verde — SÓ fechado é verde
+}
+
 const SC: Record<string,{label:string;icon:string;cor:string;bg:string;border:string}> = {
-  ativo:            {label:'Ativo',            icon:'🟢',cor:'#16a34a',bg:'#f0fdf4',border:'#86efac'},
-  visita_realizada: {label:'Visita Realizada', icon:'✅',cor:'#2563eb',bg:'#eff6ff',border:'#93c5fd'},
+  ativo:            {label:'Ativo',            icon:'🔵',cor:'#2563eb',bg:'#eff6ff',border:'#93c5fd'},
+  novo_lead:        {label:'Novo Lead',        icon:'⭐',cor:'#8b5cf6',bg:'#f5f3ff',border:'#c4b5fd'},
+  visita_realizada: {label:'Visita Realizada', icon:'✅',cor:'#0891b2',bg:'#ecfeff',border:'#67e8f9'},
   em_negociacao:    {label:'Em Negociação',    icon:'🔥',cor:'#d97706',bg:'#fffbeb',border:'#fcd34d'},
   ligar:            {label:'Ligar',            icon:'📞',cor:'#7c3aed',bg:'#f5f3ff',border:'#c4b5fd'},
-  retornar:         {label:'Retornar',         icon:'📅',cor:'#0891b2',bg:'#ecfeff',border:'#67e8f9'},
+  retornar:         {label:'Retornar',         icon:'📅',cor:'#06b6d4',bg:'#ecfeff',border:'#67e8f9'},
   proposta_enviada: {label:'Proposta Enviada', icon:'📄',cor:'#ea580c',bg:'#fff7ed',border:'#fdba74'},
   problema:         {label:'Problema',         icon:'⚠️',cor:'#dc2626',bg:'#fef2f2',border:'#fca5a5'},
   sem_contato:      {label:'Sem Contato',      icon:'❄️',cor:'#64748b',bg:'#f8fafc',border:'#cbd5e1'},
   fechado:          {label:'Produto Fechado',  icon:'🏆',cor:'#16a34a',bg:'#f0fdf4',border:'#4ade80'},
-  novo_lead:        {label:'Novo Lead',        icon:'⭐',cor:'#8b5cf6',bg:'#f5f3ff',border:'#c4b5fd'},
 }
+
 const SA: Record<string,string> = {contato:'visita_realizada',ausente:'ligar',problema:'problema',expansao:'em_negociacao'}
 const PO = ['novo_lead','ativo','visita_realizada','em_negociacao','ligar','retornar','proposta_enviada','problema','sem_contato','fechado']
 
-// PRODUTOS PARA EMPRESAS (benefícios para funcionários)
-const PRODS_EMPRESA = [
-  {id:1, nome:'Alimentação',      icon:'🍽', cat:'Benefícios', tipo:'beneficio', desc:'Benefício alimentação'},
-  {id:2, nome:'Refeição',         icon:'🥘', cat:'Benefícios', tipo:'beneficio', desc:'Benefício refeição'},
-  {id:3, nome:'Aux. Farmácia',    icon:'💊', cat:'Benefícios', tipo:'beneficio', desc:'Aux. farmácia'},
-  {id:4, nome:'Aux. Combustível', icon:'⛽', cat:'Benefícios', tipo:'beneficio', desc:'Aux. combustível'},
-  {id:5, nome:'Farmácia Convênio',icon:'🏥', cat:'Convênio',   tipo:'beneficio', desc:'Convênio farmácias'},
-  {id:6, nome:'Day Bank',         icon:'🏦', cat:'Convênio',   tipo:'beneficio', desc:'Conta digital'},
-  {id:7, nome:'Combustível Frota',icon:'🚛', cat:'Convênio',   tipo:'beneficio', desc:'Gestão de frota'},
-  {id:8, nome:'WellHub',          icon:'🏋', cat:'Agregado',   tipo:'agregado',  desc:'Plataforma de bem-estar'},
-  {id:9, nome:'Total Pass',       icon:'🎯', cat:'Agregado',   tipo:'agregado',  desc:'Acesso a academias'},
-  {id:10,nome:'Telemedicina',     icon:'🩺', cat:'Agregado',   tipo:'agregado',  desc:'Consultas médicas online'},
-  {id:11,nome:'Vidalink',         icon:'💊', cat:'Agregado',   tipo:'agregado',  desc:'Auxílio Farmácia'},
-  {id:12,nome:'Seguro MAC+Auto',  icon:'🚗', cat:'Agregado',   tipo:'agregado',  desc:'Seguro de vida + automóvel'},
+// Produtos para COMÉRCIOS — taxa em %
+const PRODS_COM = [
+  {id:21,nome:'Credenciamento', icon:'🏪',desc:'Credenciar na rede Vegas',   tipo:'taxa'},
+  {id:22,nome:'Clube Vegas',    icon:'🎁',desc:'Programa de vantagens',      tipo:'livre'},
+  {id:23,nome:'Cash Clube',     icon:'💰',desc:'Cashback e benefícios',      tipo:'taxa'},
+  {id:24,nome:'Vegas Pay',      icon:'💳',desc:'Solução de pagamentos Vegas', tipo:'taxa'},
 ]
 
-// PRODUTOS PARA COMÉRCIOS (credenciamento)
-const PRODS_COMERCIO = [
-  {id:21, nome:'Credenciamento',  icon:'🏪', desc:'Credenciar o estabelecimento na rede Vegas'},
-  {id:22, nome:'Clube Vegas',     icon:'🎁', desc:'Programa de vantagens para clientes'},
-  {id:23, nome:'Cash Clube',      icon:'💰', desc:'Cashback e benefícios exclusivos'},
-  {id:24, nome:'Vegas Pay',       icon:'💳', desc:'Solução de pagamentos Vegas'},
+// Produtos para FUNCIONÁRIOS
+const PRODS_EMP = [
+  {id:1, nome:'Alimentação',      icon:'🍽',cat:'Benefícios',tipo:'beneficio',desc:'Benefício alimentação'},
+  {id:2, nome:'Refeição',         icon:'🥘',cat:'Benefícios',tipo:'beneficio',desc:'Benefício refeição'},
+  {id:3, nome:'Aux. Farmácia',    icon:'💊',cat:'Benefícios',tipo:'beneficio',desc:'Aux. farmácia'},
+  {id:4, nome:'Aux. Combustível', icon:'⛽',cat:'Benefícios',tipo:'beneficio',desc:'Aux. combustível'},
+  {id:5, nome:'Farmácia Convênio',icon:'🏥',cat:'Convênio',  tipo:'beneficio',desc:'Convênio farmácias'},
+  {id:6, nome:'Day Bank',         icon:'🏦',cat:'Convênio',  tipo:'beneficio',desc:'Conta digital'},
+  {id:7, nome:'Combustível Frota',icon:'🚛',cat:'Convênio',  tipo:'beneficio',desc:'Gestão de frota'},
+  {id:8, nome:'WellHub',          icon:'🏋',cat:'Agregado',  tipo:'agregado', desc:'Plataforma de bem-estar'},
+  {id:9, nome:'Total Pass',       icon:'🎯',cat:'Agregado',  tipo:'agregado', desc:'Acesso a academias'},
+  {id:10,nome:'Telemedicina',     icon:'🩺',cat:'Agregado',  tipo:'agregado', desc:'Consultas médicas online'},
+  {id:11,nome:'Vidalink',         icon:'💊',cat:'Agregado',  tipo:'agregado', desc:'Auxílio Farmácia'},
+  {id:12,nome:'Seguro MAC+Auto',  icon:'🚗',cat:'Agregado',  tipo:'agregado', desc:'Seguro de vida + automóvel'},
 ]
 
 const SEGMENTOS = ['Alimentação','Farmácia','Combustível','Varejo','Restaurante/Bar','Serviços','Saúde','Outros']
@@ -77,22 +88,22 @@ const SEGMENTOS = ['Alimentação','Farmácia','Combustível','Varejo','Restaura
 function cd(la1:number,lo1:number,la2:number,lo2:number){const R=6371000,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
 function fd(m:number){return m<1000?`${Math.round(m)}m`:`${(m/1000).toFixed(1)}km`}
 function S(s:string){return SC[s]||SC.ativo}
+function pinCor(c:Comercio):string{return STATUS_COR[c.status_crm||'ativo']||'#2563eb'}
 function segTocat(seg:string):string{const m:Record<string,string>={'Alimentação':'supermercado','Farmácia':'farmacia','Combustível':'posto','Restaurante/Bar':'restaurante','Varejo':'varejo'};return m[seg]||'outros'}
-function fmtMoeda(v:string):string{const n=parseFloat(v.replace(',','.'));return isNaN(n)?'':'R$'+n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function calcTotal(func:string,vlr:string):string{const f=parseInt(func),v=parseFloat(vlr.replace(',','.'));if(isNaN(f)||isNaN(v))return '';return 'R$'+(f*v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function calcTotal(func:string,vlr:string):string{const f=parseInt(func),v=parseFloat(vlr.replace(',','.'));if(isNaN(f)||isNaN(v)||f<=0||v<=0)return '';return 'R$'+(f*v).toLocaleString('pt-BR',{minimumFractionDigits:2})}
 
 export default function PosVendaPage(){
   const sb=createClient(),router=useRouter(),mr=useRef<any>(null),mi=useRef<any>(null)
   const [cs,setCs]=useState<Comercio[]>([]),[lo,setLo]=useState(true)
-  const [bk,setBk]=useState(''),[ca,setCa]=useState(''),[sf,setSf]=useState(''),[origemFiltro,setOrFiltro]=useState<'todos'|'posvendas'|'leads'>('todos')
+  const [bk,setBk]=useState(''),[sf,setSf]=useState(''),[origemFiltro,setOrFiltro]=useState<'todos'|'posvendas'|'leads'>('todos')
   const [ab,setAb]=useState<'lista'|'pipeline'|'mapa'|'historico'>('lista')
   const [vs,setVs]=useState<Visita[]>([])
   const [mo,setMo]=useState(false),[de,setDe]=useState(false)
-  const [csel,setCsel]=useState<Comercio|null>(null),[rs,setRs]=useState(''),[sm,setSm]=useState('')
+  const [csel,setCsel]=useState<Comercio|null>(null),[rs,setRs]=useState('')
   const [ob,setOb]=useState(''),[pd,setPd]=useState('')
-  const [psEmp,setPsEmp]=useState<number[]>([])
-  const [psCom,setPsCom]=useState<number[]>([])
-  const [negociacoes,setNegociacoes]=useState<Record<number,NegociacaoProduto>>({})
+  const [psEmp,setPsEmp]=useState<number[]>([]),[psCom,setPsCom]=useState<number[]>([])
+  const [negEmp,setNegEmp]=useState<Record<number,{func:string;vlr:string}>>({})
+  const [negCom,setNegCom]=useState<Record<number,NegItem>>({})
   const [gla,setGla]=useState<number|null>(null),[glo,setGlo]=useState<number|null>(null)
   const [gs,setGs]=useState<'loading'|'ok'>('loading'),[gm,setGm]=useState('Capturando localização...')
   const [sv,setSv]=useState(false),[sc,setSc]=useState(false),[bm,setBm]=useState(''),[usr,setUsr]=useState<any>(null),[op,setOp]=useState(false)
@@ -137,11 +148,14 @@ export default function PosVendaPage(){
     if(gla&&glo){const ic=L.divIcon({className:'',html:`<div style="width:16px;height:16px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 0 0 6px rgba(37,99,235,0.2)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});L.marker([gla,glo],{icon:ic}).addTo(map).bindPopup('<b>📍 Você está aqui</b>')}
     cs.forEach(c2=>{
       if(!c2.latitude||!c2.longitude)return
-      const ci=CAT[c2.categoria]||CAT.outros,st=S(c2.status_crm||'ativo'),vt=vs.find(v=>v.nome_fantasia===c2.nome_fantasia),isLead=c2.tipo_origem==='lead'
-      const cor=isLead?'#8b5cf6':st.cor
+      const ci=CAT[c2.categoria]||CAT.outros
+      const cor=pinCor(c2)
+      const vt=vs.find(v=>v.nome_fantasia===c2.nome_fantasia)
+      const isLead=c2.tipo_origem==='lead'
+      const st=S(c2.status_crm||'ativo')
       const ic=L.divIcon({className:'',html:`<div style="width:30px;height:30px;background:${cor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:12px">${vt?'✓':isLead?'⭐':ci.icon}</span></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-32]})
       const dist=gla&&glo?fd(cd(gla,glo,c2.latitude!,c2.longitude!)):''
-      L.marker([c2.latitude,c2.longitude],{icon:ic}).addTo(map).bindPopup(`<div style="font-family:sans-serif;min-width:190px"><b style="font-size:13px">${c2.nome_fantasia}</b><div style="font-size:11px;color:#6b7280;margin:3px 0">${c2.endereco?.split(' - ')[0]}</div><div style="background:${isLead?'#f5f3ff':st.bg};color:${cor};padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-block;margin:4px 0">${isLead?'⭐ Lead':st.icon+' '+st.label}</div>${dist?`<div style="font-size:11px;color:#2563eb;font-weight:600;margin-top:2px">📍 ${dist}</div>`:''}<button onclick="window.__aC('${c2.id}')" style="margin-top:8px;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:sans-serif;width:100%">Ver + Registrar visita</button></div>`,{maxWidth:220})
+      L.marker([c2.latitude,c2.longitude],{icon:ic}).addTo(map).bindPopup(`<div style="font-family:sans-serif;min-width:190px"><b style="font-size:13px">${c2.nome_fantasia}</b><div style="font-size:11px;color:#6b7280;margin:3px 0">${c2.endereco?.split(' - ')[0]}</div><div style="background:${st.bg};color:${st.cor};padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-block;margin:4px 0">${st.icon} ${st.label}</div>${dist?`<div style="font-size:11px;color:#2563eb;font-weight:600;margin-top:2px">📍 ${dist}</div>`:''}<button onclick="window.__aC('${c2.id}')" style="margin-top:8px;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:sans-serif;width:100%">Ver + Registrar visita</button></div>`,{maxWidth:220})
     })
     ;(window as any).__aC=(id:string)=>{const c2=cs.find(x=>x.id===id);if(c2)abrirDetalhe(c2)}
   }
@@ -150,36 +164,19 @@ export default function PosVendaPage(){
 
   const ccd=cs.map(c=>({...c,distancia:(gla&&glo&&c.latitude&&c.longitude)?cd(gla,glo,c.latitude,c.longitude):undefined}))
   const filt=ccd.filter(c=>{
-    const mCat=!ca||c.categoria===ca
     const mBk=!bk||c.nome_fantasia.toLowerCase().includes(bk.toLowerCase())||c.razao_social?.toLowerCase().includes(bk.toLowerCase())
     const mSf=!sf||c.status_crm===sf
     const mOr=origemFiltro==='todos'||(origemFiltro==='leads'&&c.tipo_origem==='lead')||(origemFiltro==='posvendas'&&c.tipo_origem!=='lead')
-    return mCat&&mBk&&mSf&&mOr
+    return mBk&&mSf&&mOr
   }).sort((a,b)=>op&&a.distancia!=null&&b.distancia!=null?a.distancia-b.distancia:a.nome_fantasia.localeCompare(b.nome_fantasia))
 
   const pip=PO.map(s=>({key:s,...SC[s],total:cs.filter(c=>(c.status_crm||'ativo')===s).length}))
   const totalLeads=cs.filter(c=>c.tipo_origem==='lead').length
   const totalPv=cs.filter(c=>c.tipo_origem!=='lead').length
 
-  // Montar resumo da negociação para salvar
-  function resumoNegociacao():string{
-    const partes:string[]=[]
-    psEmp.forEach(id=>{const p=PRODS_EMPRESA.find(x=>x.id===id);const n=negociacoes[id];if(p&&n){partes.push(`${p.nome}: ${n.total_func||'?'} func × R$${n.valor_licenca||'?'}/pessoa = ${n.valor_total||'?'}/mês`)}})
-    psCom.forEach(id=>{const p=PRODS_COMERCIO.find(x=>x.id===id);const n=negociacoes[id];if(p&&n){partes.push(`${p.nome}: ${n.valor_total?'R$'+n.valor_total:'a definir'}`)}else if(p){partes.push(`${p.nome}`)}})
-    return partes.join(' | ')
-  }
-
-  function abrirDetalhe(c:Comercio){
-    setCsel(c);setPsEmp([]);setPsCom([]);setNegociacoes({})
-    setRs('');setOb('');setSm(c.status_crm||'ativo');setPd('');setSc(false);setModoLead(false);setDe(true)
-  }
-
-  function abrirModalVisita(){
-    setCsel(null);setRs('');setOb('');setBm('');setSm('');setPd('');setSc(false)
-    setModoLead(false);setNlNome('');setNlTel('');setNlEnd('');setNlCep('');setNlSeg('');setNlResp('');setNlObs('')
-    setGs('loading');setGm('Capturando localização...')
-    setMo(true);cgm()
-  }
+  function abrirDetalhe(c:Comercio){setCsel(c);setPsEmp([]);setPsCom([]);setNegEmp({});setNegCom({});setRs('');setOb('');setPd('');setSc(false);setModoLead(false);setDe(true)}
+  function abrirModalVisita(){setCsel(null);setRs('');setOb('');setBm('');setPd('');setSc(false);setModoLead(false);setNlNome('');setNlTel('');setNlEnd('');setNlCep('');setNlSeg('');setNlResp('');setNlObs('');setGs('loading');setGm('Capturando localização...');setMo(true);cgm()}
+  function iniciarNovoLead(){setModoLead(true);setNlNome(bm)}
 
   function cgm(){
     if(navigator.geolocation)navigator.geolocation.getCurrentPosition(
@@ -188,23 +185,18 @@ export default function PosVendaPage(){
     else{setGs('ok');setGm('GPS não disponível')}
   }
 
-  function togglePsEmp(id:number){setPsEmp(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
-  function togglePsCom(id:number){setPsCom(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id])}
+  function updNegEmp(id:number,campo:'func'|'vlr',val:string){setNegEmp(prev=>({...prev,[id]:{...(prev[id]||{func:'',vlr:''}),[campo]:val}}))}
+  function updNegCom(id:number,campo:'valor'|'obs',val:string){setNegCom(prev=>({...prev,[id]:{...(prev[id]||{valor:'',obs:''}),[campo]:val}}))}
 
-  function updNeg(id:number,campo:string,valor:string){
-    setNegociacoes(prev=>{
-      const atual=prev[id]||{produto_id:id,total_func:'',valor_licenca:'',valor_total:''}
-      const upd={...atual,[campo]:valor}
-      if(campo==='total_func'||campo==='valor_licenca'){
-        const f=parseInt(upd.total_func),v=parseFloat(upd.valor_licenca.replace(',','.'))
-        if(!isNaN(f)&&!isNaN(v))upd.valor_total=(f*v).toFixed(2)
-      }
-      return{...prev,[id]:upd}
-    })
+  function resumoNegociacao():string{
+    const p:string[]=[]
+    psEmp.forEach(id=>{const pr=PRODS_EMP.find(x=>x.id===id);const n=negEmp[id];if(pr&&n?.func&&n?.vlr)p.push(`${pr.nome}: ${n.func}func × R$${n.vlr}=${calcTotal(n.func,n.vlr)}/mês`)})
+    psCom.forEach(id=>{const pr=PRODS_COM.find(x=>x.id===id);const n=negCom[id];if(pr){const v=n?.valor?`${n.valor}${pr.tipo==='taxa'?'%':''}`:'-';p.push(`${pr.nome}: ${v}${n?.obs?` (${n.obs})`:''}`)}})
+    return p.join(' | ')
   }
 
   async function salvarNovoLead(){
-    if(!nlNome.trim()){alert('Informe o nome do comércio.');return}
+    if(!nlNome.trim()){alert('Informe o nome.');return}
     if(!nlSeg){alert('Selecione o segmento.');return}
     setSvLead(true)
     const cat=segTocat(nlSeg)
@@ -218,13 +210,7 @@ export default function PosVendaPage(){
       data_ultimo_contato:new Date().toISOString().split('T')[0],
     })
     if(error){alert('Erro ao salvar: '+error.message);setSvLead(false);return}
-    await sb.from('visitas_campo').insert({
-      vendedor_id:usr?.id,nome_fantasia:nlNome.trim(),tipo_estabelecimento:cat,
-      latitude:gla??-22.7330,longitude:glo??-47.3340,resultado:'contato',
-      observacao:`Prospecção: ${nlObs||'Visita inicial'}${nlResp?` | Responsável: ${nlResp}`:''}`,
-      data_visita:new Date().toISOString(),
-    })
-    // Recarrega lista
+    await sb.from('visitas_campo').insert({vendedor_id:usr?.id,nome_fantasia:nlNome.trim(),tipo_estabelecimento:cat,latitude:gla??-22.7330,longitude:glo??-47.3340,resultado:'contato',observacao:`Prospecção${nlResp?` | Resp: ${nlResp}`:''}${nlObs?` | ${nlObs}`:''}`,data_visita:new Date().toISOString()})
     const{data}=await sb.from('comercios_credenciados').select('*').eq('ativo',true).order('nome_fantasia')
     if(data)setCs(data)
     setSvLead(false);setScLead(true)
@@ -234,13 +220,13 @@ export default function PosVendaPage(){
     if(!csel){alert('Selecione o comércio.');return}
     if(!rs){alert('Selecione o resultado.');return}
     setSv(true)
-    const ns=sm||SA[rs]||'visita_realizada'
-    const todosProds=[...psEmp.map(id=>PRODS_EMPRESA.find(p=>p.id===id)?.nome||''),...psCom.map(id=>PRODS_COMERCIO.find(p=>p.id===id)?.nome||'')].filter(Boolean)
+    const ns=SA[rs]||'visita_realizada'
+    const todosProds=[...psEmp.map(id=>PRODS_EMP.find(p=>p.id===id)?.nome||''),...psCom.map(id=>PRODS_COM.find(p=>p.id===id)?.nome||'')].filter(Boolean)
     const resumo=resumoNegociacao()
     const oc=[ob,resumo?`Negociação: ${resumo}`:''].filter(Boolean).join(' | ')
     await sb.from('visitas_campo').insert({vendedor_id:usr?.id,nome_fantasia:csel.nome_fantasia,tipo_estabelecimento:csel.categoria,latitude:gla??-22.7330,longitude:glo??-47.3340,resultado:rs,observacao:oc||null,data_visita:new Date().toISOString()})
     await sb.from('comercios_credenciados').update({status_crm:ns,data_ultimo_contato:new Date().toISOString().split('T')[0],data_proximo_contato:pd||null,produtos_negociando:todosProds.length>0?todosProds:null,obs_crm:ob||null}).eq('id',csel.id)
-    setCs(prev=>prev.map(c=>c.id===csel.id?{...c,status_crm:ns,data_ultimo_contato:new Date().toISOString().split('T')[0],produtos_negociando:todosProds}:c))
+    setCs(prev=>prev.map(c=>c.id===csel.id?{...c,status_crm:ns,produtos_negociando:todosProds}:c))
     setSv(false);setSc(true);setDe(false)
   }
 
@@ -271,13 +257,7 @@ export default function PosVendaPage(){
 
       {/* KPIs */}
       <div style={{background:'#fff',borderBottom:'1px solid #e8eaed',display:'flex',gap:10,padding:'10px 18px',flexShrink:0,overflowX:'auto'}}>
-        {[
-          {l:'Pós-venda',v:totalPv,c:'#2563eb'},
-          {l:'Leads',v:totalLeads,c:'#8b5cf6'},
-          {l:'Hoje',v:vs.length,c:'#16a34a'},
-          {l:'Negociando',v:cs.filter(c=>c.status_crm==='em_negociacao').length,c:'#d97706'},
-          {l:'Fechados',v:cs.filter(c=>c.status_crm==='fechado').length,c:'#16a34a'},
-        ].map(k=>(
+        {[{l:'Pós-venda',v:totalPv,c:'#2563eb'},{l:'Leads',v:totalLeads,c:'#8b5cf6'},{l:'Hoje',v:vs.length,c:'#16a34a'},{l:'Negociando',v:cs.filter(c=>c.status_crm==='em_negociacao').length,c:'#d97706'},{l:'Fechados',v:cs.filter(c=>c.status_crm==='fechado').length,c:'#16a34a'}].map(k=>(
           <div key={k.l} style={{background:'#f4f5f7',border:'1px solid #e8eaed',borderRadius:10,padding:'9px 14px',minWidth:90,flexShrink:0}}>
             <div style={{fontSize:9.5,fontWeight:600,color:'#6b7280',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}}>{k.l}</div>
             <div style={{fontSize:20,fontWeight:800,color:k.c,lineHeight:1}}>{k.v}</div>
@@ -294,49 +274,55 @@ export default function PosVendaPage(){
 
       <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
 
-        {/* LISTA */}
+        {/* LISTA — altura limitada com scroll interno */}
         {ab==='lista'&&(
-          <div style={{flex:1,overflowY:'auto'}}>
-            <div style={{padding:'10px 14px',borderBottom:'1px solid #e8eaed',background:'#fff',display:'flex',flexDirection:'column',gap:7}}>
-              <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+          <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
+            {/* Filtros fixos */}
+            <div style={{padding:'10px 14px',borderBottom:'1px solid #e8eaed',background:'#fff',flexShrink:0}}>
+              <div style={{display:'flex',gap:6,marginBottom:7,flexWrap:'wrap',alignItems:'center'}}>
                 {[{k:'todos',l:'Todos'},{k:'posvendas',l:'🏪 Pós-venda'},{k:'leads',l:'⭐ Leads'}].map(f=>(
                   <button key={f.k} onClick={()=>setOrFiltro(f.k as any)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${origemFiltro===f.k?'#2563eb':'#e8eaed'}`,background:origemFiltro===f.k?'#2563eb':'#f4f5f7',color:origemFiltro===f.k?'#fff':'#6b7280',fontFamily:'inherit'}}>{f.l}</button>
                 ))}
-                {gla&&<button onClick={()=>setOp(!op)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${op?'#16a34a':'#e8eaed'}`,background:op?'#16a34a':'#f4f5f7',color:op?'#fff':'#6b7280',fontFamily:'inherit',marginLeft:'auto'}}>📍 {op?'Próx. ✓':'Próx.'}</button>}
+                {gla&&<button onClick={()=>setOp(!op)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${op?'#16a34a':'#e8eaed'}`,background:op?'#16a34a':'#f4f5f7',color:op?'#fff':'#6b7280',fontFamily:'inherit',marginLeft:'auto'}}>📍 Próx.</button>}
               </div>
-              <input type="text" placeholder="🔍 Buscar..." value={bk} onChange={e=>setBk(e.target.value)} style={{...inp}}/>
+              <input type="text" placeholder="🔍 Buscar comércio..." value={bk} onChange={e=>setBk(e.target.value)} style={{...inp,marginBottom:7}}/>
+              {/* Filtros de status */}
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-                {[{k:'',l:'Todos'},{k:'novo_lead',l:'⭐ Lead'},{k:'em_negociacao',l:'🔥 Neg.'},{k:'ligar',l:'📞 Ligar'},{k:'problema',l:'⚠️'},{k:'sem_contato',l:'❄️'},{k:'fechado',l:'🏆'}].map(f=>(
-                  <button key={f.k} onClick={()=>setSf(f.k)} style={{padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:600,cursor:'pointer',border:`1.5px solid ${sf===f.k?'#2563eb':'#e8eaed'}`,background:sf===f.k?'#2563eb':'#f4f5f7',color:sf===f.k?'#fff':'#6b7280',fontFamily:'inherit'}}>{f.l}</button>
+                {[{k:'',l:'Todos status'},{k:'ativo',l:'🔵 Ativo'},{k:'novo_lead',l:'⭐ Lead'},{k:'em_negociacao',l:'🔥 Neg.'},{k:'visita_realizada',l:'✅ Visita'},{k:'ligar',l:'📞 Ligar'},{k:'proposta_enviada',l:'📄 Proposta'},{k:'problema',l:'⚠️ Prob.'},{k:'sem_contato',l:'❄️ Sem contato'},{k:'fechado',l:'🏆 Fechado'}].map(f=>(
+                  <button key={f.k} onClick={()=>setSf(f.k)} style={{padding:'4px 9px',borderRadius:20,fontSize:10.5,fontWeight:600,cursor:'pointer',border:`1.5px solid ${sf===f.k?'#2563eb':'#e8eaed'}`,background:sf===f.k?'#2563eb':'#f4f5f7',color:sf===f.k?'#fff':'#6b7280',fontFamily:'inherit'}}>{f.l}</button>
                 ))}
               </div>
             </div>
-            {filt.map(c=>{
-              const ci=CAT[c.categoria]||CAT.outros,st=S(c.status_crm||'ativo'),isLead=c.tipo_origem==='lead',vt=vs.find(v=>v.nome_fantasia===c.nome_fantasia)
-              return(
-                <div key={c.id} onClick={()=>abrirDetalhe(c)} style={{padding:'12px 16px',borderBottom:'1px solid #e8eaed',background:'#fff',cursor:'pointer',borderLeft:`3px solid ${isLead?'#8b5cf6':st.cor}`}}
-                  onMouseEnter={e=>(e.currentTarget.style.background='#fafbfc')} onMouseLeave={e=>(e.currentTarget.style.background='#fff')}>
-                  <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
-                    <div style={{width:38,height:38,borderRadius:10,background:isLead?'#f5f3ff':ci.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0}}>{isLead?'⭐':ci.icon}</div>
-                    <div style={{flex:1}}>
-                      <div style={{display:'flex',alignItems:'center',gap:6}}>
-                        <div style={{fontWeight:700,fontSize:13,color:'#111827'}}>{c.nome_fantasia}</div>
-                        {isLead&&<span style={{background:'#f5f3ff',color:'#8b5cf6',fontSize:9.5,fontWeight:700,padding:'1px 6px',borderRadius:10,border:'1px solid #c4b5fd'}}>LEAD</span>}
+            {/* Lista com scroll limitado */}
+            <div style={{flex:1,overflowY:'auto',minHeight:0}}>
+              {filt.length===0&&<div style={{padding:30,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:28,marginBottom:8}}>🔍</div><div>Nenhum comércio encontrado</div></div>}
+              {filt.map(c=>{
+                const ci=CAT[c.categoria]||CAT.outros,st=S(c.status_crm||'ativo'),isLead=c.tipo_origem==='lead',vt=vs.find(v=>v.nome_fantasia===c.nome_fantasia)
+                const corPin=pinCor(c)
+                return(
+                  <div key={c.id} onClick={()=>abrirDetalhe(c)} style={{padding:'12px 16px',borderBottom:'1px solid #e8eaed',background:'#fff',cursor:'pointer',borderLeft:`3px solid ${corPin}`}}
+                    onMouseEnter={e=>(e.currentTarget.style.background='#fafbfc')} onMouseLeave={e=>(e.currentTarget.style.background='#fff')}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
+                      <div style={{width:38,height:38,borderRadius:10,background:isLead?'#f5f3ff':ci.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>{isLead?'⭐':ci.icon}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <div style={{fontWeight:700,fontSize:13,color:'#111827',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.nome_fantasia}</div>
+                          {isLead&&<span style={{background:'#f5f3ff',color:'#8b5cf6',fontSize:9.5,fontWeight:700,padding:'1px 6px',borderRadius:10,border:'1px solid #c4b5fd',flexShrink:0}}>LEAD</span>}
+                        </div>
+                        <div style={{fontSize:11,color:'#9ca3af',marginTop:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.endereco?.split(' - ')[0]||c.subgrupo}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:5,flexWrap:'wrap'}}>
+                          <span style={{background:st.bg,color:st.cor,border:`1px solid ${st.border}`,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>{st.icon} {st.label}</span>
+                          {vt&&<span style={{background:'#f0fdf4',color:'#16a34a',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>✓ {vt.hora}</span>}
+                          {c.distancia!=null&&<span style={{fontSize:10.5,color:'#2563eb',fontWeight:600}}>📍 {fd(c.distancia)}</span>}
+                        </div>
+                        {c.produtos_negociando&&c.produtos_negociando.length>0&&<div style={{fontSize:10,color:'#d97706',marginTop:4,fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>🔥 {Array.isArray(c.produtos_negociando)?c.produtos_negociando.join(', '):c.produtos_negociando}</div>}
                       </div>
-                      <div style={{fontSize:11,color:'#9ca3af',marginTop:1}}>{c.endereco?.split(' - ')[0]||c.razao_social}</div>
-                      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6,flexWrap:'wrap'}}>
-                        <span style={{background:st.bg,color:st.cor,border:`1px solid ${st.border}`,fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>{st.icon} {st.label}</span>
-                        {vt&&<span style={{background:'#f0fdf4',color:'#16a34a',fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:20}}>✓ {vt.hora}</span>}
-                        {c.distancia!=null&&<span style={{fontSize:10.5,color:'#2563eb',fontWeight:600}}>📍 {fd(c.distancia)}</span>}
-                        {c.taxa>0&&<span style={{fontSize:10.5,color:'#6b7280',fontWeight:600,marginLeft:'auto'}}>Taxa: {c.taxa}%</span>}
-                      </div>
-                      {c.produtos_negociando&&c.produtos_negociando.length>0&&<div style={{fontSize:10,color:'#d97706',marginTop:4,fontWeight:600}}>🔥 {Array.isArray(c.produtos_negociando)?c.produtos_negociando.join(', '):c.produtos_negociando}</div>}
+                      <div style={{color:'#9ca3af',fontSize:16,flexShrink:0}}>›</div>
                     </div>
-                    <div style={{color:'#9ca3af',fontSize:16}}>›</div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -344,37 +330,17 @@ export default function PosVendaPage(){
         {ab==='pipeline'&&(
           <div style={{flex:1,overflowY:'auto',padding:14}}>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
-              <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:12,padding:'12px 14px',textAlign:'center'}}>
-                <div style={{fontSize:9.5,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}}>Pós-venda Vegas</div>
-                <div style={{fontSize:26,fontWeight:800,color:'#2563eb'}}>{totalPv}</div>
-              </div>
-              <div style={{background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:12,padding:'12px 14px',textAlign:'center'}}>
-                <div style={{fontSize:9.5,fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:3}}>Leads / Prospecção</div>
-                <div style={{fontSize:26,fontWeight:800,color:'#8b5cf6'}}>{totalLeads}</div>
-              </div>
+              <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:12,padding:'12px 14px',textAlign:'center'}}><div style={{fontSize:9.5,fontWeight:700,color:'#6b7280',textTransform:'uppercase',marginBottom:3}}>Pós-venda Vegas</div><div style={{fontSize:26,fontWeight:800,color:'#2563eb'}}>{totalPv}</div></div>
+              <div style={{background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:12,padding:'12px 14px',textAlign:'center'}}><div style={{fontSize:9.5,fontWeight:700,color:'#6b7280',textTransform:'uppercase',marginBottom:3}}>Leads / Prospecção</div><div style={{fontSize:26,fontWeight:800,color:'#8b5cf6'}}>{totalLeads}</div></div>
             </div>
             {pip.filter(s=>s.total>0).map(s=>(
               <div key={s.key} style={{background:'#fff',border:`1px solid ${s.border}`,borderRadius:12,padding:'12px 14px',marginBottom:8,cursor:'pointer'}} onClick={()=>{setSf(s.key==='ativo'?'':s.key);setAb('lista')}}>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>
                   <div style={{width:40,height:40,borderRadius:11,background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{s.icon}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontWeight:700,fontSize:13.5,color:'#111827'}}>{s.label}</div>
-                    <div style={{height:5,background:'#f4f5f7',borderRadius:3,overflow:'hidden',marginTop:5}}>
-                      <div style={{height:'100%',width:`${(s.total/Math.max(cs.length,1))*100}%`,background:s.cor,borderRadius:3}}/>
-                    </div>
-                  </div>
-                  <div style={{textAlign:'right'}}>
-                    <div style={{fontSize:22,fontWeight:800,color:s.cor,lineHeight:1}}>{s.total}</div>
-                    <div style={{fontSize:10,color:'#9ca3af'}}>{Math.round((s.total/Math.max(cs.length,1))*100)}%</div>
-                  </div>
+                  <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13.5,color:'#111827'}}>{s.label}</div><div style={{height:5,background:'#f4f5f7',borderRadius:3,overflow:'hidden',marginTop:5}}><div style={{height:'100%',width:`${(s.total/Math.max(cs.length,1))*100}%`,background:s.cor,borderRadius:3}}/></div></div>
+                  <div style={{textAlign:'right'}}><div style={{fontSize:22,fontWeight:800,color:s.cor,lineHeight:1}}>{s.total}</div><div style={{fontSize:10,color:'#9ca3af'}}>{Math.round((s.total/Math.max(cs.length,1))*100)}%</div></div>
                 </div>
-                {s.total>0&&s.total<=3&&(
-                  <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${s.border}`}}>
-                    {cs.filter(c=>(c.status_crm||'ativo')===s.key).map(c=>(
-                      <div key={c.id} style={{fontSize:11.5,color:'#374151',padding:'2px 0',display:'flex',justifyContent:'space-between'}}><span>{c.nome_fantasia}</span><span style={{color:'#9ca3af'}}>{c.tipo_origem==='lead'?'Lead':c.taxa?`${c.taxa}%`:''}</span></div>
-                    ))}
-                  </div>
-                )}
+                {s.total>0&&s.total<=3&&(<div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${s.border}`}}>{cs.filter(c=>(c.status_crm||'ativo')===s.key).map(c=>(<div key={c.id} style={{fontSize:11.5,color:'#374151',padding:'2px 0',display:'flex',justifyContent:'space-between'}}><span>{c.nome_fantasia}</span><span style={{color:'#9ca3af'}}>{c.tipo_origem==='lead'?'Lead':''}</span></div>))}</div>)}
                 {s.total>3&&<div style={{marginTop:6,fontSize:11,color:s.cor,fontWeight:600}}>Toque para ver todos →</div>}
               </div>
             ))}
@@ -385,10 +351,10 @@ export default function PosVendaPage(){
         {ab==='mapa'&&(
           <div style={{flex:1,position:'relative'}}>
             <div ref={mr} style={{height:'100%',width:'100%'}}/>
-            <div style={{position:'absolute',top:12,left:12,zIndex:500,background:'rgba(255,255,255,0.95)',border:'1px solid #e8eaed',borderRadius:11,padding:'9px 13px',fontSize:10.5}}>
-              <div style={{fontWeight:700,marginBottom:6,color:'#111827'}}>Legenda</div>
-              {[['#2563eb','Pós-venda'],['#8b5cf6','Lead/Prospecção'],['#d97706','Em Negociação'],['#dc2626','Problema'],['#16a34a','Fechado']].map(([cor,lbl])=>(
-                <div key={lbl} style={{display:'flex',alignItems:'center',gap:5,marginBottom:3}}><div style={{width:9,height:9,borderRadius:'50%',background:cor}}/><span>{lbl}</span></div>
+            <div style={{position:'absolute',top:12,left:12,zIndex:500,background:'rgba(255,255,255,0.97)',border:'1px solid #e8eaed',borderRadius:12,padding:'10px 14px',boxShadow:'0 4px 14px rgba(0,0,0,.08)',fontSize:11}}>
+              <div style={{fontWeight:700,marginBottom:7,color:'#111827',fontSize:12}}>Legenda</div>
+              {[['#2563eb','Pós-venda (sem ação)'],['#8b5cf6','Lead/Prospecção'],['#d97706','Em Negociação'],['#0891b2','Visita Realizada'],['#ea580c','Proposta Enviada'],['#dc2626','Problema'],['#64748b','Sem Contato'],['#16a34a','Produto Fechado']].map(([cor,lbl2])=>(
+                <div key={lbl2} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}><div style={{width:10,height:10,borderRadius:'50%',background:cor,flexShrink:0}}/><span style={{color:'#374151'}}>{lbl2}</span></div>
               ))}
             </div>
             <button onClick={abrirModalVisita} style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',zIndex:500,background:'#16a34a',color:'#fff',border:'none',borderRadius:50,padding:'12px 20px',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba(22,163,74,0.4)'}}>📍 Registrar Visita Aqui</button>
@@ -398,11 +364,11 @@ export default function PosVendaPage(){
         {/* HISTÓRICO */}
         {ab==='historico'&&(
           <div style={{flex:1,overflowY:'auto',padding:14}}>
-            {vs.length===0?<div style={{padding:40,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:36,marginBottom:10}}>📋</div><div style={{fontWeight:600}}>Nenhuma visita hoje ainda</div></div>:vs.map((v,i)=>(
+            {vs.length===0?<div style={{padding:40,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:36,marginBottom:10}}>📋</div><div style={{fontWeight:600}}>Nenhuma visita hoje</div></div>:vs.map((v,i)=>(
               <div key={i} style={{background:'#fff',border:'1px solid #e8eaed',borderRadius:12,padding:14,marginBottom:9}}>
                 <div style={{display:'flex',alignItems:'center',gap:11}}>
                   <div style={{width:36,height:36,borderRadius:9,background:v.resultado==='contato'?'#f0fdf4':v.resultado==='expansao'?'#eff6ff':v.resultado==='problema'?'#fef2f2':'#fffbeb',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17}}>{v.resultado==='contato'?'✅':v.resultado==='ausente'?'😔':v.resultado==='problema'?'⚠️':'🚀'}</div>
-                  <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{v.nome_fantasia}</div><div style={{fontSize:11,color:'#6b7280',marginTop:1}}>{v.hora}{v.tipo_origem==='lead'&&<span style={{marginLeft:6,background:'#f5f3ff',color:'#8b5cf6',fontSize:9.5,fontWeight:700,padding:'1px 6px',borderRadius:10}}>LEAD</span>}</div></div>
+                  <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{v.nome_fantasia}</div><div style={{fontSize:11,color:'#6b7280',marginTop:1}}>{v.hora}</div></div>
                   {v.latitude&&<div style={{fontSize:10,color:'#16a34a',fontWeight:600}}>📍 GPS</div>}
                 </div>
                 {v.observacao&&<div style={{background:'#f4f5f7',borderRadius:7,padding:'8px 11px',marginTop:8,fontSize:11.5,color:'#374151'}}>{v.observacao}</div>}
@@ -412,12 +378,11 @@ export default function PosVendaPage(){
         )}
       </div>
 
-      {/* ══ MODAL DETALHE CRM ══ */}
+      {/* MODAL DETALHE CRM */}
       {de&&csel&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:1000,backdropFilter:'blur(3px)'}}>
           <div style={{background:'#fff',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:600,maxHeight:'94vh',overflowY:'auto'}}>
             <div style={{width:38,height:4,background:'#d1d5db',borderRadius:2,margin:'11px auto 0'}}/>
-            {/* Header */}
             <div style={{padding:'14px 18px',borderBottom:'1px solid #e8eaed',display:'flex',alignItems:'flex-start',gap:13}}>
               <div style={{width:48,height:48,borderRadius:13,background:csel.tipo_origem==='lead'?'#f5f3ff':(CAT[csel.categoria]||CAT.outros).bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{csel.tipo_origem==='lead'?'⭐':(CAT[csel.categoria]||CAT.outros).icon}</div>
               <div style={{flex:1}}>
@@ -427,7 +392,6 @@ export default function PosVendaPage(){
                 </div>
                 <div style={{fontSize:11.5,color:'#6b7280',marginTop:2}}>{csel.subgrupo} · {csel.endereco?.split(' - ')[0]}</div>
                 <div style={{display:'flex',gap:7,marginTop:5,flexWrap:'wrap'}}>
-                  {csel.taxa>0&&<span style={{background:'#eff6ff',color:'#1d4ed8',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>Taxa: {csel.taxa}%</span>}
                   {csel.telefone&&<span style={{background:'#f4f5f7',color:'#374151',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>📞 {csel.telefone}</span>}
                   {csel.distancia!=null&&<span style={{background:'#f0fdf4',color:'#16a34a',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>📍 {fd(csel.distancia)}</span>}
                 </div>
@@ -456,72 +420,72 @@ export default function PosVendaPage(){
                 ))}
               </div>
 
-              {/* ── PRODUTOS PARA COMÉRCIOS ── */}
+              {/* PRODUTOS VEGAS PARA COMÉRCIO */}
               <div style={{marginBottom:14}}>
-                <div style={{...lbl,display:'flex',alignItems:'center',gap:7,marginBottom:8}}>🏪 Produtos Vegas para este comércio</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>
-                  {PRODS_COMERCIO.map(p=>{const sl=psCom.includes(p.id);return(
-                    <div key={p.id} onClick={()=>togglePsCom(p.id)} style={{padding:'10px 11px',borderRadius:9,border:`2px solid ${sl?'#2563eb':'#e8eaed'}`,background:sl?'#eff6ff':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
+                <div style={{...lbl,marginBottom:8}}>🏪 Produtos Vegas para este comércio</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+                  {PRODS_COM.map(p=>{const sl=psCom.includes(p.id);return(
+                    <div key={p.id} onClick={()=>setPsCom(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'10px 11px',borderRadius:9,border:`2px solid ${sl?'#2563eb':'#e8eaed'}`,background:sl?'#eff6ff':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
                       <span style={{fontSize:18}}>{p.icon}</span>
                       <div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,color:sl?'#1d4ed8':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
                       {sl&&<span style={{color:'#2563eb',fontSize:13,fontWeight:700}}>✓</span>}
                     </div>
                   )})}
                 </div>
-                {/* Negociação dos produtos de comércio */}
+                {/* Detalhes negociação por produto de comércio */}
                 {psCom.length>0&&(
-                  <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:9,padding:'11px 13px',marginTop:4}}>
+                  <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:9,padding:'11px 13px'}}>
                     <div style={{fontSize:11,fontWeight:700,color:'#1d4ed8',marginBottom:8}}>💰 Detalhes da negociação</div>
-                    {psCom.map(id=>{const p=PRODS_COMERCIO.find(x=>x.id===id);if(!p)return null;const n=negociacoes[id]||{produto_id:id,total_func:'',valor_licenca:'',valor_total:''};return(
-                      <div key={id} style={{marginBottom:10,paddingBottom:10,borderBottom:'1px solid #dbeafe'}}>
-                        <div style={{fontSize:11,fontWeight:700,color:'#374151',marginBottom:6}}>{p.icon} {p.nome}</div>
-                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                          <div><label style={lbl}>Valor negociado</label><input type="text" value={n.valor_total} onChange={e=>updNeg(id,'valor_total',e.target.value)} placeholder="R$ 0,00" style={inpSm}/></div>
-                          <div><label style={lbl}>Observação</label><input type="text" value={n.valor_licenca} onChange={e=>updNeg(id,'valor_licenca',e.target.value)} placeholder="Ex: taxa mensal" style={inpSm}/></div>
+                    {psCom.map(id=>{
+                      const p=PRODS_COM.find(x=>x.id===id);if(!p)return null
+                      const n=negCom[id]||{valor:'',obs:''}
+                      return(
+                        <div key={id} style={{marginBottom:10,paddingBottom:10,borderBottom:'1px solid #dbeafe'}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#374151',marginBottom:6}}>{p.icon} {p.nome}</div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                            <div>
+                              <label style={lbl}>{p.tipo==='taxa'?'Taxa adm. negociada (%)':'Valor negociado'}</label>
+                              <div style={{display:'flex',alignItems:'center',gap:4}}>
+                                <input type="text" value={n.valor} onChange={e=>updNegCom(id,'valor',e.target.value)} placeholder={p.tipo==='taxa'?'Ex: 3,50':'Ex: 200,00'} style={{...inpSm}}/>
+                                {p.tipo==='taxa'&&<span style={{fontSize:14,fontWeight:700,color:'#2563eb',flexShrink:0}}>%</span>}
+                              </div>
+                            </div>
+                            <div>
+                              <label style={lbl}>Observação</label>
+                              <input type="text" value={n.obs} onChange={e=>updNegCom(id,'obs',e.target.value)} placeholder="Ex: mensal, com carência..." style={inpSm}/>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )})}
+                      )
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* ── PRODUTOS PARA EMPRESAS / FUNCIONÁRIOS ── */}
+              {/* PRODUTOS PARA FUNCIONÁRIOS */}
               <div style={{marginBottom:14}}>
-                <div style={{...lbl,marginBottom:8}}>👥 Produtos para funcionários do comércio</div>
+                <div style={{...lbl,marginBottom:8}}>👥 Produtos para funcionários</div>
                 {['Benefícios','Convênio','Agregado'].map(cat=>(
                   <div key={cat} style={{marginBottom:10}}>
                     <div style={{fontSize:10,fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}}>{cat}</div>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                      {PRODS_EMPRESA.filter(p=>p.cat===cat).map(p=>{const sl=psEmp.includes(p.id);return(
-                        <div key={p.id} onClick={()=>togglePsEmp(p.id)} style={{padding:'9px 10px',borderRadius:9,border:`2px solid ${sl?'#16a34a':'#e8eaed'}`,background:sl?'#f0fdf4':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
+                      {PRODS_EMP.filter(p=>p.cat===cat).map(p=>{const sl=psEmp.includes(p.id);return(
+                        <div key={p.id} onClick={()=>setPsEmp(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'9px 10px',borderRadius:9,border:`2px solid ${sl?'#16a34a':'#e8eaed'}`,background:sl?'#f0fdf4':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
                           <span style={{fontSize:16}}>{p.icon}</span>
                           <div style={{flex:1}}><div style={{fontSize:11.5,fontWeight:700,color:sl?'#15803d':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
                           {sl&&<span style={{color:'#16a34a',fontSize:12,fontWeight:700}}>✓</span>}
                         </div>
                       )})}
                     </div>
-                    {/* Detalhes negociação por produto selecionado */}
-                    {PRODS_EMPRESA.filter(p=>p.cat===cat&&psEmp.includes(p.id)).map(p=>{
-                      const n=negociacoes[p.id]||{produto_id:p.id,total_func:'',valor_licenca:'',valor_total:''}
-                      const isAgr=p.tipo==='agregado'
+                    {PRODS_EMP.filter(p=>p.cat===cat&&psEmp.includes(p.id)).map(p=>{
+                      const n=negEmp[p.id]||{func:'',vlr:''}
                       return(
                         <div key={p.id} style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:8,padding:'10px 12px',marginTop:5}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#15803d',marginBottom:7}}>{p.icon} {p.nome} — detalhes</div>
+                          <div style={{fontSize:11,fontWeight:700,color:'#15803d',marginBottom:7}}>{p.icon} {p.nome} — negociação</div>
                           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:7}}>
-                            <div>
-                              <label style={lbl}>Nº funcionários</label>
-                              <input type="number" value={n.total_func} onChange={e=>updNeg(p.id,'total_func',e.target.value)} placeholder="0" style={inpSm}/>
-                            </div>
-                            <div>
-                              <label style={lbl}>{isAgr?'Valor/licença':'Valor/pessoa'}</label>
-                              <input type="text" value={n.valor_licenca} onChange={e=>updNeg(p.id,'valor_licenca',e.target.value)} placeholder="R$ 0,00" style={inpSm}/>
-                            </div>
-                            <div>
-                              <label style={lbl}>Total/mês</label>
-                              <div style={{...inpSm,background:'#dcfce7',color:'#15803d',fontWeight:700,display:'flex',alignItems:'center'}}>
-                                {n.total_func&&n.valor_licenca?calcTotal(n.total_func,n.valor_licenca):'—'}
-                              </div>
-                            </div>
+                            <div><label style={lbl}>Nº funcionários</label><input type="number" value={n.func} onChange={e=>updNegEmp(p.id,'func',e.target.value)} placeholder="0" style={inpSm}/></div>
+                            <div><label style={lbl}>{p.tipo==='agregado'?'Valor/licença':'Valor/pessoa'}</label><input type="text" value={n.vlr} onChange={e=>updNegEmp(p.id,'vlr',e.target.value)} placeholder="R$ 0,00" style={inpSm}/></div>
+                            <div><label style={lbl}>Total/mês</label><div style={{...inpSm,background:'#dcfce7',color:'#15803d',fontWeight:700,display:'flex',alignItems:'center'}}>{n.func&&n.vlr?calcTotal(n.func,n.vlr):'—'}</div></div>
                           </div>
                         </div>
                       )
@@ -530,17 +494,8 @@ export default function PosVendaPage(){
                 ))}
               </div>
 
-              {/* Resumo combo */}
-              {(psEmp.length+psCom.length)>=2&&(
-                <div style={{background:'linear-gradient(135deg,#fffbeb,#fff7ed)',border:'1.5px solid #fcd34d',borderRadius:10,padding:'12px 14px',marginBottom:14}}>
-                  <div style={{fontSize:12,fontWeight:800,color:'#92400e',marginBottom:6}}>🔥 Combo Selecionado</div>
-                  {psCom.length>0&&<div style={{fontSize:11.5,color:'#374151',marginBottom:3}}><b>Comércio:</b> {psCom.map(id=>PRODS_COMERCIO.find(p=>p.id===id)?.nome||'').join(', ')}</div>}
-                  {psEmp.length>0&&<div style={{fontSize:11.5,color:'#374151'}}><b>Funcionários:</b> {psEmp.map(id=>PRODS_EMPRESA.find(p=>p.id===id)?.nome||'').join(', ')}</div>}
-                </div>
-              )}
-
               {/* RESULTADO */}
-              <div style={lbl}>Resultado da visita *</div>
+              <div style={lbl}>Resultado *</div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:10}}>
                 {[{k:'contato',l:'✅ Contato feito'},{k:'ausente',l:'😔 Responsável ausente'},{k:'problema',l:'⚠️ Problema'},{k:'expansao',l:'🚀 Interesse em expansão'}].map(r=>(
                   <button key={r.k} onClick={()=>setRs(r.k)} style={{padding:10,borderRadius:10,border:`2px solid ${rs===r.k?'#2563eb':'#e8eaed'}`,background:rs===r.k?'#eff6ff':'#f4f5f7',cursor:'pointer',fontSize:12.5,fontWeight:600,color:rs===r.k?'#2563eb':'#6b7280',fontFamily:'inherit'}}>{r.l}</button>
@@ -551,26 +506,22 @@ export default function PosVendaPage(){
                 <div><label style={lbl}>Próximo contato</label><input type="date" value={pd} onChange={e=>setPd(e.target.value)} style={inp}/></div>
                 <div><label style={lbl}>Contrato</label><div style={{...inp,display:'flex',alignItems:'center',fontSize:12,fontWeight:600,color:'#374151'}}>{csel.contrato}</div></div>
               </div>
-              <div style={{marginBottom:14}}><label style={lbl}>Observação</label><textarea rows={2} value={ob} onChange={e=>setOb(e.target.value)} placeholder="Ex: Gerente demonstrou interesse, retornar na semana que vem..." style={{...inp,resize:'none'}}/></div>
+              <div style={{marginBottom:14}}><label style={lbl}>Observação geral</label><textarea rows={2} value={ob} onChange={e=>setOb(e.target.value)} placeholder="Ex: Gerente demonstrou interesse, retornar semana que vem..." style={{...inp,resize:'none'}}/></div>
               <button onClick={salvar} disabled={sv} style={{width:'100%',padding:14,background:sv?'#86efac':'#16a34a',color:'#fff',border:'none',borderRadius:12,fontSize:14,fontWeight:800,cursor:sv?'not-allowed':'pointer',fontFamily:'inherit'}}>{sv?'Salvando...':'📍 Salvar Visita'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ══ MODAL VISITA / NOVO LEAD ══ */}
+      {/* MODAL VISITA / NOVO LEAD */}
       {mo&&(
         <div onClick={e=>{if(e.target===e.currentTarget)setMo(false)}} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:1000,backdropFilter:'blur(3px)'}}>
           <div style={{background:'#fff',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:560,maxHeight:'92vh',overflowY:'auto'}}>
             <div style={{width:38,height:4,background:'#d1d5db',borderRadius:2,margin:'11px auto 0'}}/>
-
             {modoLead?(
               <>
                 <div style={{padding:'14px 18px 0',display:'flex',alignItems:'flex-start',gap:11}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:16,fontWeight:800,display:'flex',alignItems:'center',gap:7}}>⭐ Cadastrar Novo Lead <span style={{background:'#f5f3ff',color:'#8b5cf6',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20}}>PROSPECÇÃO</span></div>
-                    <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>Entra direto no pipeline como Novo Lead</div>
-                  </div>
+                  <div style={{flex:1}}><div style={{fontSize:16,fontWeight:800,display:'flex',alignItems:'center',gap:7}}>⭐ Cadastrar Novo Lead <span style={{background:'#f5f3ff',color:'#8b5cf6',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20}}>PROSPECÇÃO</span></div><div style={{fontSize:11,color:'#6b7280',marginTop:2}}>Entra direto no pipeline como Novo Lead</div></div>
                   <span onClick={()=>setMo(false)} style={{fontSize:20,color:'#9ca3af',cursor:'pointer',padding:4}}>✕</span>
                 </div>
                 <div style={{padding:'12px 18px 28px'}}>
@@ -584,19 +535,16 @@ export default function PosVendaPage(){
                         <div style={{gridColumn:'span 2'}}><label style={lbl}>Nome fantasia *</label><input type="text" value={nlNome} onChange={e=>setNlNome(e.target.value)} placeholder="Ex: Mercado Bom Preço" style={inp}/></div>
                         <div><label style={lbl}>Telefone *</label><input type="tel" value={nlTel} onChange={e=>setNlTel(e.target.value)} placeholder="(00) 00000-0000" style={inp}/></div>
                         <div><label style={lbl}>Responsável *</label><input type="text" value={nlResp} onChange={e=>setNlResp(e.target.value)} placeholder="Nome do decisor" style={inp}/></div>
-                        <div style={{gridColumn:'span 2'}}>
-                          <label style={lbl}>Segmento *</label>
+                        <div style={{gridColumn:'span 2'}}><label style={lbl}>Segmento *</label>
                           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:5}}>
-                            {SEGMENTOS.map(s=>(
-                              <button key={s} onClick={()=>setNlSeg(s)} style={{padding:'7px 4px',borderRadius:7,border:`2px solid ${nlSeg===s?'#8b5cf6':'#e8eaed'}`,background:nlSeg===s?'#f5f3ff':'#f4f5f7',cursor:'pointer',fontSize:10.5,fontWeight:700,color:nlSeg===s?'#8b5cf6':'#6b7280',fontFamily:'inherit',textAlign:'center'}}>{s}</button>
-                            ))}
+                            {SEGMENTOS.map(s=>(<button key={s} onClick={()=>setNlSeg(s)} style={{padding:'7px 4px',borderRadius:7,border:`2px solid ${nlSeg===s?'#8b5cf6':'#e8eaed'}`,background:nlSeg===s?'#f5f3ff':'#f4f5f7',cursor:'pointer',fontSize:10.5,fontWeight:700,color:nlSeg===s?'#8b5cf6':'#6b7280',fontFamily:'inherit',textAlign:'center'}}>{s}</button>))}
                           </div>
                         </div>
                         <div><label style={lbl}>CEP</label><input type="text" value={nlCep} onChange={e=>setNlCep(e.target.value)} placeholder="00000-000" style={inp}/></div>
                         <div><label style={lbl}>Endereço</label><input type="text" value={nlEnd} onChange={e=>setNlEnd(e.target.value)} placeholder="Rua, número" style={inp}/></div>
-                        <div style={{gridColumn:'span 2'}}><label style={lbl}>Observação inicial</label><textarea rows={2} value={nlObs} onChange={e=>setNlObs(e.target.value)} placeholder="Ex: Interesse em benefícios, tem 40 funcionários..." style={{...inp,resize:'none'}}/></div>
+                        <div style={{gridColumn:'span 2'}}><label style={lbl}>Observação inicial</label><textarea rows={2} value={nlObs} onChange={e=>setNlObs(e.target.value)} placeholder="Ex: Interesse em benefícios, 40 funcionários..." style={{...inp,resize:'none'}}/></div>
                       </div>
-                      <div style={{background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:9,padding:'9px 12px',marginBottom:12,fontSize:11.5,color:'#6d28d9'}}>⭐ Entrará no pipeline como <b>Novo Lead</b> com localização GPS salva.</div>
+                      <div style={{background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:9,padding:'9px 12px',marginBottom:12,fontSize:11.5,color:'#6d28d9'}}>⭐ Entrará no pipeline como <b>Novo Lead</b> com GPS salvo.</div>
                       <button onClick={salvarNovoLead} disabled={svLead} style={{width:'100%',padding:13,background:svLead?'#c4b5fd':'#8b5cf6',color:'#fff',border:'none',borderRadius:11,fontSize:14,fontWeight:800,cursor:svLead?'not-allowed':'pointer',fontFamily:'inherit'}}>{svLead?'Salvando...':'⭐ Cadastrar Lead + Registrar Visita'}</button>
                     </>
                   ):(
@@ -638,12 +586,12 @@ export default function PosVendaPage(){
                               {cs.filter(c=>c.nome_fantasia.toLowerCase().includes(bm.toLowerCase())).length===0&&(
                                 <div style={{padding:'14px',textAlign:'center'}}>
                                   <div style={{fontSize:13,color:'#6b7280',marginBottom:9}}>"{bm}" não encontrado</div>
-                                  <button onClick={()=>iniciarNovoLead()} style={{background:'#8b5cf6',color:'#fff',border:'none',borderRadius:9,padding:'10px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',width:'100%'}}>⭐ Cadastrar como Novo Lead</button>
+                                  <button onClick={iniciarNovoLead} style={{background:'#8b5cf6',color:'#fff',border:'none',borderRadius:9,padding:'10px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',width:'100%'}}>⭐ Cadastrar como Novo Lead</button>
                                 </div>
                               )}
                             </div>
                           )}
-                          <button onClick={()=>iniciarNovoLead()} style={{width:'100%',marginTop:7,padding:'9px',background:'#f5f3ff',border:'1.5px dashed #c4b5fd',borderRadius:9,fontSize:12,fontWeight:700,color:'#8b5cf6',cursor:'pointer',fontFamily:'inherit'}}>⭐ Comércio novo? Cadastrar como Lead →</button>
+                          <button onClick={iniciarNovoLead} style={{width:'100%',marginTop:7,padding:'9px',background:'#f5f3ff',border:'1.5px dashed #c4b5fd',borderRadius:9,fontSize:12,fontWeight:700,color:'#8b5cf6',cursor:'pointer',fontFamily:'inherit'}}>⭐ Comércio novo? Cadastrar como Lead →</button>
                         </div>
                       )}
                       <div style={{borderRadius:9,padding:'9px 12px',display:'flex',alignItems:'center',gap:9,marginBottom:12,fontSize:12,fontWeight:600,background:gs==='ok'?'#f0fdf4':'#eff6ff',border:`1px solid ${gs==='ok'?'#86efac':'#dbeafe'}`,color:gs==='ok'?'#16a34a':'#2563eb'}}>
@@ -680,6 +628,4 @@ export default function PosVendaPage(){
       )}
     </div>
   )
-
-  function iniciarNovoLead(){setModoLead(true);setNlNome(bm)}
 }
