@@ -1,35 +1,20 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 
 import TopbarCrm from '@/components/crm/TopbarCrm'
 import KpisCrm from '@/components/crm/KpisCrm'
 import TabsCrm from '@/components/crm/TabsCrm'
+import ListaComercios from '@/components/crm/ListaComercios'
+import HistoricoHoje from '@/components/crm/HistoricoHoje'
 
 import type { Comercio, Visita } from '@/types/crm'
+import { PO, SC } from '@/types/crm'
 
-import {
-  CAT,
-  SC,
-  SA,
-  PO,
-  RES_LABEL,
-  RES_COR,
-  RES_ICON,
-} from '@/types/crm'
-
-import {
-  calcularDistancia,
-  formatarDistancia,
-  statusVisual,
-  pinCor,
-} from '@/utils/geo'
-
-import {
-  formatarDataHora,
-} from '@/utils/crm'
+import { calcularDistancia } from '@/utils/geo'
+import { formatarDataHora } from '@/utils/crm'
 
 import {
   buscarComerciosAtivos,
@@ -43,8 +28,6 @@ import {
 export default function PosVendaPage() {
   const sb = createClient()
   const router = useRouter()
-  const mr = useRef<any>(null)
-  const mi = useRef<any>(null)
 
   const [cs, setCs] = useState<Comercio[]>([])
   const [vs, setVs] = useState<Visita[]>([])
@@ -56,7 +39,9 @@ export default function PosVendaPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await sb.auth.getUser()
+      const {
+        data: { user },
+      } = await sb.auth.getUser()
 
       if (!user) {
         router.push('/login')
@@ -66,11 +51,10 @@ export default function PosVendaPage() {
       setUsr(user)
 
       const comercios = await buscarComerciosAtivos(sb)
-      setCs(comercios)
-
       const visitas = await buscarVisitasHoje(sb)
-      setVs(visitas)
 
+      setCs(comercios)
+      setVs(visitas)
       setLo(false)
     }
 
@@ -100,28 +84,41 @@ export default function PosVendaPage() {
     )
   }
 
+  const comerciosComDistancia = cs.map((c) => ({
+    ...c,
+    distancia:
+      gla && glo && c.latitude && c.longitude
+        ? calcularDistancia(gla, glo, c.latitude, c.longitude)
+        : undefined,
+  }))
+
   const totalLeads = cs.filter((c) => c.tipo_origem === 'lead').length
   const totalPv = cs.filter((c) => c.tipo_origem !== 'lead').length
 
   if (lo) {
     return (
-      <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          height: '100vh',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+        }}
+      >
         Carregando...
       </div>
     )
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-
-      {/* 🔹 Topo */}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f5f7' }}>
       <TopbarCrm
         email={usr?.email}
-        onRegistrarVisita={() => alert('Modal aqui depois')}
+        onRegistrarVisita={() => alert('Modal entra no próximo lote')}
         onLogout={logout}
       />
 
-      {/* 🔹 KPIs */}
       <KpisCrm
         totalPv={totalPv}
         totalLeads={totalLeads}
@@ -130,7 +127,6 @@ export default function PosVendaPage() {
         fechados={cs.filter((c) => c.status_crm === 'fechado').length}
       />
 
-      {/* 🔹 Tabs */}
       <TabsCrm
         abaAtual={ab}
         totalLista={cs.length}
@@ -138,72 +134,55 @@ export default function PosVendaPage() {
         onChange={setAb}
       />
 
-      {/* 🔹 Conteúdo */}
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-
         {ab === 'lista' && (
+          <ListaComercios
+            comercios={comerciosComDistancia}
+            visitasHoje={vs}
+            onAlterarStatus={alterarStatus}
+          />
+        )}
+
+        {ab === 'pipeline' && (
           <div>
-            {cs.map((c) => (
+            {PO.map((s) => (
               <div
-                key={c.id}
+                key={s}
                 style={{
+                  background: '#fff',
                   border: '1px solid #e8eaed',
                   borderRadius: 10,
                   padding: 12,
                   marginBottom: 8,
                 }}
               >
-                <b>{c.nome_fantasia}</b>
-
-                <div style={{ fontSize: 12, color: '#6b7280' }}>
-                  {c.endereco}
-                </div>
-
-                <div style={{ marginTop: 6 }}>
-                  <span
-                    style={{
-                      background: statusVisual(c.status_crm).bg,
-                      padding: '4px 8px',
-                      borderRadius: 20,
-                      fontSize: 11,
-                    }}
-                  >
-                    {statusVisual(c.status_crm).label}
-                  </span>
-                </div>
-
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => alterarStatus(c.id, 'em_negociacao')}>
-                    🔥 Negociar
-                  </button>
-                </div>
+                <strong>{SC[s].label}</strong>: {cs.filter((c) => c.status_crm === s).length}
               </div>
             ))}
           </div>
         )}
 
-        {ab === 'pipeline' && (
-          <div>
-            {PO.map((s) => (
-              <div key={s}>
-                {SC[s].label}: {cs.filter((c) => c.status_crm === s).length}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {ab === 'historico' && (
-          <div>
-            {vs.map((v) => (
-              <div key={v.id}>
-                {v.nome_fantasia} - {formatarDataHora(v.data_visita)}
-              </div>
-            ))}
-          </div>
-        )}
+        {ab === 'historico' && <HistoricoHoje visitas={vs} />}
 
         {ab === 'mapa' && (
-          <div>Mapa entra no próximo lote</div>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #e8eaed',
+              borderRadius: 12,
+              padding: 20,
+            }}
+          >
+            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>🗺 Mapa</div>
+            <div style={{ color: '#6b7280', marginBottom: 10 }}>
+              O mapa entra no próximo lote, já num componente separado.
+            </div>
+
+            <div style={{ fontSize: 12, color: '#374151' }}>
+              Sua localização atual:{' '}
+              {gla && glo ? `${gla.toFixed(5)}, ${glo.toFixed(5)}` : 'não capturada'}
+            </div>
+          </div>
         )}
       </div>
     </div>
