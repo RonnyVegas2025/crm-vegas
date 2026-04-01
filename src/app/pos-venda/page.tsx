@@ -13,8 +13,9 @@ import PipelineCrm from '@/components/crm/PipelineCrm'
 import MapaCrm from '@/components/crm/MapaCrm'
 import ModalRegistrarVisita from '@/components/crm/ModalRegistrarVisita'
 import ModalNovoLead from '@/components/crm/ModalNovoLead'
+import ModalDetalheComercio from '@/components/crm/ModalDetalheComercio'
 
-import type { Comercio, Visita } from '@/types/crm'
+import type { Comercio, HistoricoItem, Visita } from '@/types/crm'
 import { calcularDistancia, segmentoParaCategoria } from '@/utils/geo'
 import { dataHojeIso } from '@/utils/crm'
 
@@ -22,6 +23,7 @@ import {
   buscarComerciosAtivos,
   atualizarStatusComercio,
   criarNovoLead,
+  buscarHistoricoComercio,
 } from '@/services/crmService'
 
 import {
@@ -45,6 +47,11 @@ export default function PosVendaPage() {
   const [modalVisitaAberto, setModalVisitaAberto] = useState(false)
   const [modalLeadAberto, setModalLeadAberto] = useState(false)
   const [nomeLeadInicial, setNomeLeadInicial] = useState('')
+
+  const [detalheAberto, setDetalheAberto] = useState(false)
+  const [comercioSelecionado, setComercioSelecionado] = useState<Comercio | null>(null)
+  const [historicoDetalhe, setHistoricoDetalhe] = useState<HistoricoItem[]>([])
+  const [carregandoHistorico, setCarregandoHistorico] = useState(false)
 
   useEffect(() => {
     async function init() {
@@ -86,6 +93,24 @@ export default function PosVendaPage() {
 
     setCs(comercios)
     setVs(visitas)
+
+    if (comercioSelecionado) {
+      const atualizado = comercios.find((c) => c.id === comercioSelecionado.id) || null
+      setComercioSelecionado(atualizado)
+    }
+  }
+
+  async function carregarHistorico(nomeFantasia: string) {
+    setCarregandoHistorico(true)
+    const data = await buscarHistoricoComercio(sb, nomeFantasia)
+    setHistoricoDetalhe(data)
+    setCarregandoHistorico(false)
+  }
+
+  function abrirDetalhe(comercio: Comercio) {
+    setComercioSelecionado(comercio)
+    setDetalheAberto(true)
+    carregarHistorico(comercio.nome_fantasia)
   }
 
   async function logout() {
@@ -99,6 +124,10 @@ export default function PosVendaPage() {
     setCs((prev) =>
       prev.map((c) => (c.id === id ? { ...c, status_crm: status } : c))
     )
+
+    if (comercioSelecionado?.id === id) {
+      setComercioSelecionado((prev) => (prev ? { ...prev, status_crm: status } : null))
+    }
   }
 
   async function salvarVisita(payload: {
@@ -191,6 +220,16 @@ export default function PosVendaPage() {
         ? calcularDistancia(gla, glo, c.latitude, c.longitude)
         : undefined,
   }))
+
+  const comercioSelecionadoComDistancia = comercioSelecionado
+    ? {
+        ...comercioSelecionado,
+        distancia:
+          gla && glo && comercioSelecionado.latitude && comercioSelecionado.longitude
+            ? calcularDistancia(gla, glo, comercioSelecionado.latitude, comercioSelecionado.longitude)
+            : comercioSelecionado.distancia,
+      }
+    : null
 
   const comerciosFiltrados = statusFiltro
     ? comerciosComDistancia.filter((c) => (c.status_crm || 'ativo') === statusFiltro)
@@ -288,6 +327,7 @@ export default function PosVendaPage() {
               comercios={comerciosFiltrados}
               visitasHoje={vs}
               onAlterarStatus={alterarStatus}
+              onAbrirDetalhe={abrirDetalhe}
             />
           </>
         )}
@@ -337,6 +377,19 @@ export default function PosVendaPage() {
           setModalLeadAberto(false)
           setNomeLeadInicial('')
         }}
+      />
+
+      <ModalDetalheComercio
+        aberto={detalheAberto}
+        comercio={comercioSelecionadoComDistancia}
+        historico={historicoDetalhe}
+        carregandoHistorico={carregandoHistorico}
+        onFechar={() => {
+          setDetalheAberto(false)
+          setComercioSelecionado(null)
+          setHistoricoDetalhe([])
+        }}
+        onAlterarStatus={alterarStatus}
       />
     </div>
   )
