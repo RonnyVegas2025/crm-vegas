@@ -24,6 +24,7 @@ import {
   atualizarStatusComercio,
   criarNovoLead,
   buscarHistoricoComercio,
+  atualizarPosVisita,
 } from '@/services/crmService'
 
 import {
@@ -128,6 +129,24 @@ export default function PosVendaPage() {
     if (comercioSelecionado?.id === id) {
       setComercioSelecionado((prev) => (prev ? { ...prev, status_crm: status } : null))
     }
+  }
+
+  async function salvarNegociacao(payload: {
+    comercioId: string
+    status_crm: string
+    data_proximo_contato: string | null
+    produtos_negociando: string[]
+    obs_crm: string | null
+  }) {
+    await atualizarPosVisita(sb, payload.comercioId, {
+      status_crm: payload.status_crm,
+      data_ultimo_contato: dataHojeIso(),
+      data_proximo_contato: payload.data_proximo_contato,
+      produtos_negociando: payload.produtos_negociando.length > 0 ? payload.produtos_negociando : null,
+      obs_crm: payload.obs_crm,
+    })
+
+    await recarregarDados()
   }
 
   async function salvarVisita(payload: {
@@ -390,6 +409,7 @@ export default function PosVendaPage() {
           setHistoricoDetalhe([])
         }}
         onAlterarStatus={alterarStatus}
+        onSalvarNegociacao={salvarNegociacao}
       />
     </div>
   )
