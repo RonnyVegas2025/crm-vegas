@@ -4,6 +4,10 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 
+import TopbarCrm from '@/components/crm/TopbarCrm'
+import KpisCrm from '@/components/crm/KpisCrm'
+import TabsCrm from '@/components/crm/TabsCrm'
+
 import type {
   Comercio,
   Visita,
