@@ -9,21 +9,18 @@ import KpisCrm from '@/components/crm/KpisCrm'
 import TabsCrm from '@/components/crm/TabsCrm'
 import ListaComercios from '@/components/crm/ListaComercios'
 import HistoricoHoje from '@/components/crm/HistoricoHoje'
+import PipelineCrm from '@/components/crm/PipelineCrm'
+import MapaCrm from '@/components/crm/MapaCrm'
 
 import type { Comercio, Visita } from '@/types/crm'
-import { PO, SC } from '@/types/crm'
-
 import { calcularDistancia } from '@/utils/geo'
-import { formatarDataHora } from '@/utils/crm'
 
 import {
   buscarComerciosAtivos,
   atualizarStatusComercio,
 } from '@/services/crmService'
 
-import {
-  buscarVisitasHoje,
-} from '@/services/visitaService'
+import { buscarVisitasHoje } from '@/services/visitaService'
 
 export default function PosVendaPage() {
   const sb = createClient()
@@ -36,6 +33,7 @@ export default function PosVendaPage() {
   const [usr, setUsr] = useState<any>(null)
   const [gla, setGla] = useState<number | null>(null)
   const [glo, setGlo] = useState<number | null>(null)
+  const [statusFiltro, setStatusFiltro] = useState<string>('')
 
   useEffect(() => {
     async function init() {
@@ -92,6 +90,10 @@ export default function PosVendaPage() {
         : undefined,
   }))
 
+  const comerciosFiltrados = statusFiltro
+    ? comerciosComDistancia.filter((c) => (c.status_crm || 'ativo') === statusFiltro)
+    : comerciosComDistancia
+
   const totalLeads = cs.filter((c) => c.tipo_origem === 'lead').length
   const totalPv = cs.filter((c) => c.tipo_origem !== 'lead').length
 
@@ -112,7 +114,14 @@ export default function PosVendaPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f4f5f7' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        background: '#f4f5f7',
+      }}
+    >
       <TopbarCrm
         email={usr?.email}
         onRegistrarVisita={() => alert('Modal entra no próximo lote')}
@@ -129,60 +138,76 @@ export default function PosVendaPage() {
 
       <TabsCrm
         abaAtual={ab}
-        totalLista={cs.length}
+        totalLista={comerciosFiltrados.length}
         totalHoje={vs.length}
         onChange={setAb}
       />
 
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
         {ab === 'lista' && (
-          <ListaComercios
-            comercios={comerciosComDistancia}
-            visitasHoje={vs}
-            onAlterarStatus={alterarStatus}
-          />
-        )}
-
-        {ab === 'pipeline' && (
-          <div>
-            {PO.map((s) => (
+          <>
+            {statusFiltro && (
               <div
-                key={s}
                 style={{
                   background: '#fff',
                   border: '1px solid #e8eaed',
                   borderRadius: 10,
-                  padding: 12,
-                  marginBottom: 8,
+                  padding: '10px 12px',
+                  marginBottom: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 10,
                 }}
               >
-                <strong>{SC[s].label}</strong>: {cs.filter((c) => c.status_crm === s).length}
+                <div style={{ fontSize: 12.5, color: '#374151' }}>
+                  Filtro ativo no funil: <b>{statusFiltro}</b>
+                </div>
+
+                <button
+                  onClick={() => setStatusFiltro('')}
+                  style={{
+                    background: '#f4f5f7',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    color: '#374151',
+                  }}
+                >
+                  Limpar filtro
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+
+            <ListaComercios
+              comercios={comerciosFiltrados}
+              visitasHoje={vs}
+              onAlterarStatus={alterarStatus}
+            />
+          </>
+        )}
+
+        {ab === 'pipeline' && (
+          <PipelineCrm
+            comercios={cs}
+            onSelecionarStatus={(status) => {
+              setStatusFiltro(status)
+              setAb('lista')
+            }}
+          />
         )}
 
         {ab === 'historico' && <HistoricoHoje visitas={vs} />}
 
         {ab === 'mapa' && (
-          <div
-            style={{
-              background: '#fff',
-              border: '1px solid #e8eaed',
-              borderRadius: 12,
-              padding: 20,
-            }}
-          >
-            <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>🗺 Mapa</div>
-            <div style={{ color: '#6b7280', marginBottom: 10 }}>
-              O mapa entra no próximo lote, já num componente separado.
-            </div>
-
-            <div style={{ fontSize: 12, color: '#374151' }}>
-              Sua localização atual:{' '}
-              {gla && glo ? `${gla.toFixed(5)}, ${glo.toFixed(5)}` : 'não capturada'}
-            </div>
-          </div>
+          <MapaCrm
+            comercios={comerciosFiltrados}
+            latitudeAtual={gla}
+            longitudeAtual={glo}
+          />
         )}
       </div>
     </div>
