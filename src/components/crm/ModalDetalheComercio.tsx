@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Comercio, HistoricoItem } from '@/types/crm'
 import {
   CAT,
@@ -32,6 +32,13 @@ interface ModalDetalheComercioProps {
   carregandoHistorico: boolean
   onFechar: () => void
   onAlterarStatus: (id: string, status: string) => Promise<void> | void
+  onSalvarNegociacao: (payload: {
+    comercioId: string
+    status_crm: string
+    data_proximo_contato: string | null
+    produtos_negociando: string[]
+    obs_crm: string | null
+  }) => Promise<void>
 }
 
 export default function ModalDetalheComercio({
@@ -41,12 +48,28 @@ export default function ModalDetalheComercio({
   carregandoHistorico,
   onFechar,
   onAlterarStatus,
+  onSalvarNegociacao,
 }: ModalDetalheComercioProps) {
   const [abaDetalhe, setAbaDetalhe] = useState<'negociacao' | 'historico'>('negociacao')
   const [psEmp, setPsEmp] = useState<number[]>([])
   const [psCom, setPsCom] = useState<number[]>([])
   const [negEmp, setNegEmp] = useState<Record<number, NegEmpItem>>({})
   const [negCom, setNegCom] = useState<Record<number, NegItem>>({})
+  const [obsGeral, setObsGeral] = useState('')
+  const [proximoContato, setProximoContato] = useState('')
+  const [salvando, setSalvando] = useState(false)
+
+  useEffect(() => {
+    if (!comercio || !aberto) return
+
+    setObsGeral(comercio.obs_crm || '')
+    setProximoContato(comercio.data_proximo_contato || '')
+    setPsEmp([])
+    setPsCom([])
+    setNegEmp({})
+    setNegCom({})
+    setAbaDetalhe('negociacao')
+  }, [comercio, aberto])
 
   const ci = useMemo(() => {
     if (!comercio) return CAT.outros
@@ -67,6 +90,66 @@ export default function ModalDetalheComercio({
       ...prev,
       [id]: { ...(prev[id] || { valor: '', obs: '' }), [campo]: val },
     }))
+  }
+
+  function montarResumoNegociacao(): string {
+    const partes: string[] = []
+
+    psEmp.forEach((id) => {
+      const pr = PRODS_EMP.find((x) => x.id === id)
+      const n = negEmp[id]
+      if (!pr) return
+
+      const valor =
+        n?.func && n?.vlr
+          ? `${n.func} func × R$${n.vlr} = ${calcularTotal(n.func, n.vlr)}/mês`
+          : 'selecionado'
+
+      const obs = n?.obs ? ` (${n.obs})` : ''
+      partes.push(`${pr.nome}: ${valor}${obs}`)
+    })
+
+    psCom.forEach((id) => {
+      const pr = PRODS_COM.find((x) => x.id === id)
+      const n = negCom[id]
+      if (!pr) return
+
+      const valor = n?.valor ? `${n.valor}${pr.tipo === 'taxa' ? '%' : ''}` : '-'
+      const obs = n?.obs ? ` (${n.obs})` : ''
+      partes.push(`${pr.nome}: ${valor}${obs}`)
+    })
+
+    return partes.join(' | ')
+  }
+
+  async function handleSalvarNegociacao() {
+    setSalvando(true)
+
+    try {
+      const produtosSelecionados = [
+        ...psEmp.map((id) => PRODS_EMP.find((p) => p.id === id)?.nome || ''),
+        ...psCom.map((id) => PRODS_COM.find((p) => p.id === id)?.nome || ''),
+      ].filter(Boolean)
+
+      const resumo = montarResumoNegociacao()
+      const observacaoFinal = [obsGeral, resumo ? `Negociação: ${resumo}` : '']
+        .filter(Boolean)
+        .join(' | ')
+
+      await onSalvarNegociacao({
+        comercioId: comercio.id,
+        status_crm: produtosSelecionados.length > 0 ? 'em_negociacao' : comercio.status_crm || 'ativo',
+        data_proximo_contato: proximoContato || null,
+        produtos_negociando: produtosSelecionados,
+        obs_crm: observacaoFinal || null,
+      })
+
+      alert('Negociação salva com sucesso.')
+    } catch (error: any) {
+      alert(error.message || 'Erro ao salvar negociação.')
+    } finally {
+      setSalvando(false)
+    }
   }
 
   return (
@@ -310,17 +393,7 @@ export default function ModalDetalheComercio({
                   { l: 'E-mail', v: comercio.email || '—' },
                 ].map((f) => (
                   <div key={f.l}>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#6b7280',
-                        textTransform: 'uppercase',
-                        letterSpacing: '.5px',
-                        marginBottom: 4,
-                        display: 'block',
-                      }}
-                    >
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>
                       {f.l}
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 500, color: '#111827', wordBreak: 'break-word' }}>
@@ -330,30 +403,61 @@ export default function ModalDetalheComercio({
                 ))}
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
+                    Próximo contato
+                  </label>
+                  <input
+                    type="date"
+                    value={proximoContato}
+                    onChange={(e) => setProximoContato(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      border: '1.5px solid #e8eaed',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      background: '#f4f5f7',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
+                    Status atual
+                  </label>
+                  <div
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      border: '1.5px solid #e8eaed',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      background: '#f4f5f7',
+                      color: '#374151',
+                      fontWeight: 600,
+                    }}
+                  >
+                    {statusVisual(comercio.status_crm || 'ativo').label}
+                  </div>
+                </div>
+              </div>
+
               <div style={{ marginBottom: 14 }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '.5px',
-                    marginBottom: 8,
-                  }}
-                >
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
                   🏪 Produtos Vegas para este comércio
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
                   {PRODS_COM.map((p) => {
                     const sl = psCom.includes(p.id)
-
                     return (
                       <div
                         key={p.id}
-                        onClick={() =>
-                          setPsCom((prev) => (prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id]))
-                        }
+                        onClick={() => setPsCom((prev) => (prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id]))}
                         style={{
                           padding: '9px 10px',
                           borderRadius: 9,
@@ -366,14 +470,10 @@ export default function ModalDetalheComercio({
                         }}
                       >
                         <span style={{ fontSize: 17 }}>{p.icon}</span>
-
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 11.5, fontWeight: 700, color: sl ? '#1d4ed8' : '#111827' }}>
-                            {p.nome}
-                          </div>
+                          <div style={{ fontSize: 11.5, fontWeight: 700, color: sl ? '#1d4ed8' : '#111827' }}>{p.nome}</div>
                           <div style={{ fontSize: 10, color: '#6b7280' }}>{p.desc}</div>
                         </div>
-
                         {sl && <span style={{ color: '#2563eb', fontSize: 12, fontWeight: 700 }}>✓</span>}
                       </div>
                     )
@@ -381,14 +481,7 @@ export default function ModalDetalheComercio({
                 </div>
 
                 {psCom.length > 0 && (
-                  <div
-                    style={{
-                      background: '#eff6ff',
-                      border: '1px solid #dbeafe',
-                      borderRadius: 9,
-                      padding: '11px 13px',
-                    }}
-                  >
+                  <div style={{ background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 9, padding: '11px 13px' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', marginBottom: 8 }}>
                       💰 Detalhes da negociação
                     </div>
@@ -396,35 +489,17 @@ export default function ModalDetalheComercio({
                     {psCom.map((id) => {
                       const p = PRODS_COM.find((x) => x.id === id)
                       if (!p) return null
-
                       const n = negCom[id] || { valor: '', obs: '' }
 
                       return (
-                        <div
-                          key={id}
-                          style={{
-                            marginBottom: 10,
-                            paddingBottom: 10,
-                            borderBottom: '1px solid #dbeafe',
-                          }}
-                        >
+                        <div key={id} style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #dbeafe' }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
                             {p.icon} {p.nome}
                           </div>
 
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 }}>
                             <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
+                              <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                                 {p.tipo === 'taxa' ? 'Taxa adm. negociada (%)' : 'Valor negociado'}
                               </label>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -444,26 +519,12 @@ export default function ModalDetalheComercio({
                                     width: '100%',
                                   }}
                                 />
-                                {p.tipo === 'taxa' && (
-                                  <span style={{ fontSize: 14, fontWeight: 700, color: '#2563eb', flexShrink: 0 }}>
-                                    %
-                                  </span>
-                                )}
+                                {p.tipo === 'taxa' && <span style={{ fontSize: 14, fontWeight: 700, color: '#2563eb', flexShrink: 0 }}>%</span>}
                               </div>
                             </div>
 
                             <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
+                              <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                                 Observação
                               </label>
                               <input
@@ -492,44 +553,23 @@ export default function ModalDetalheComercio({
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <div
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: '#6b7280',
-                    textTransform: 'uppercase',
-                    letterSpacing: '.5px',
-                    marginBottom: 8,
-                  }}
-                >
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 8 }}>
                   👥 Produtos para funcionários
                 </div>
 
                 {['Benefícios', 'Convênio', 'Agregado'].map((cat) => (
                   <div key={cat} style={{ marginBottom: 10 }}>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#9ca3af',
-                        textTransform: 'uppercase',
-                        letterSpacing: '.5px',
-                        marginBottom: 5,
-                      }}
-                    >
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 5 }}>
                       {cat}
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                       {PRODS_EMP.filter((p) => p.cat === cat).map((p) => {
                         const sl = psEmp.includes(p.id)
-
                         return (
                           <div
                             key={p.id}
-                            onClick={() =>
-                              setPsEmp((prev) => (prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id]))
-                            }
+                            onClick={() => setPsEmp((prev) => (prev.includes(p.id) ? prev.filter((x) => x !== p.id) : [...prev, p.id]))}
                             style={{
                               padding: '9px 10px',
                               borderRadius: 9,
@@ -542,14 +582,10 @@ export default function ModalDetalheComercio({
                             }}
                           >
                             <span style={{ fontSize: 16 }}>{p.icon}</span>
-
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 11.5, fontWeight: 700, color: sl ? '#15803d' : '#111827' }}>
-                                {p.nome}
-                              </div>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: sl ? '#15803d' : '#111827' }}>{p.nome}</div>
                               <div style={{ fontSize: 10, color: '#6b7280' }}>{p.desc}</div>
                             </div>
-
                             {sl && <span style={{ color: '#16a34a', fontSize: 12, fontWeight: 700 }}>✓</span>}
                           </div>
                         )
@@ -558,42 +594,15 @@ export default function ModalDetalheComercio({
 
                     {PRODS_EMP.filter((p) => p.cat === cat && psEmp.includes(p.id)).map((p) => {
                       const n = negEmp[p.id] || { func: '', vlr: '', obs: '' }
-
                       return (
-                        <div
-                          key={p.id}
-                          style={{
-                            background: '#f0fdf4',
-                            border: '1px solid #86efac',
-                            borderRadius: 8,
-                            padding: '10px 12px',
-                            marginTop: 5,
-                          }}
-                        >
+                        <div key={p.id} style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '10px 12px', marginTop: 5 }}>
                           <div style={{ fontSize: 11, fontWeight: 700, color: '#15803d', marginBottom: 7 }}>
                             {p.icon} {p.nome} — negociação
                           </div>
 
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr 1fr',
-                              gap: 7,
-                              marginBottom: 7,
-                            }}
-                          >
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 7 }}>
                             <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
+                              <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                                 Nº funcionários
                               </label>
                               <input
@@ -615,17 +624,7 @@ export default function ModalDetalheComercio({
                             </div>
 
                             <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
+                              <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                                 {p.tipo === 'agregado' ? 'Valor/licença' : 'Valor/pessoa'}
                               </label>
                               <input
@@ -647,17 +646,7 @@ export default function ModalDetalheComercio({
                             </div>
 
                             <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
+                              <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                                 Total/mês
                               </label>
                               <div
@@ -682,17 +671,7 @@ export default function ModalDetalheComercio({
                           </div>
 
                           <div>
-                            <label
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                color: '#6b7280',
-                                textTransform: 'uppercase',
-                                letterSpacing: '.5px',
-                                marginBottom: 4,
-                                display: 'block',
-                              }}
-                            >
+                            <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
                               Observação
                             </label>
                             <input
@@ -718,6 +697,48 @@ export default function ModalDetalheComercio({
                   </div>
                 ))}
               </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4, display: 'block' }}>
+                  Observação geral
+                </label>
+                <textarea
+                  rows={3}
+                  value={obsGeral}
+                  onChange={(e) => setObsGeral(e.target.value)}
+                  placeholder="Ex: gerente demonstrou interesse, retorno em 7 dias..."
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    border: '1.5px solid #e8eaed',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontFamily: 'inherit',
+                    outline: 'none',
+                    background: '#f4f5f7',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+
+              <button
+                onClick={handleSalvarNegociacao}
+                disabled={salvando}
+                style={{
+                  width: '100%',
+                  padding: 14,
+                  background: salvando ? '#93c5fd' : '#2563eb',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: salvando ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {salvando ? 'Salvando negociação...' : '💾 Salvar negociação'}
+              </button>
             </div>
           )}
 
@@ -739,8 +760,7 @@ export default function ModalDetalheComercio({
               ) : (
                 <>
                   <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12, fontWeight: 500 }}>
-                    {historico.length} interação{historico.length !== 1 ? 'ões' : ''} registrada
-                    {historico.length !== 1 ? 's' : ''}
+                    {historico.length} interação{historico.length !== 1 ? 'ões' : ''} registrada{historico.length !== 1 ? 's' : ''}
                   </div>
 
                   {historico.map((h, i) => (
