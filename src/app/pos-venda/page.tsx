@@ -11,14 +11,20 @@ interface Comercio {
   terminal: string; contrato: string; ultima_transacao: string
   latitude?: number; longitude?: number; distancia?: number
   status_crm: string; data_ultimo_contato?: string
-  data_proximo_contato?: string; produtos_negociando?: string[]; obs_crm?: string
-  tipo_origem?: string
+  data_proximo_contato?: string; produtos_negociando?: string[]
+  obs_crm?: string; tipo_origem?: string
 }
 interface Visita {
-  nome_fantasia: string; resultado: string; observacao: string
-  latitude: number|null; longitude: number|null; hora: string; tipo_origem?: string
+  id: string; nome_fantasia: string; resultado: string
+  observacao: string; latitude: number|null; longitude: number|null
+  hora: string; data_visita: string; tipo_origem?: string
+}
+interface HistoricoItem {
+  id: string; resultado: string; observacao: string
+  data_visita: string; hora: string
 }
 interface NegItem { valor: string; obs: string }
+interface NegEmpItem { func: string; vlr: string; obs: string }
 
 const CAT: Record<string,{icon:string;cor:string;bg:string}> = {
   supermercado:{icon:'🛒',cor:'#2563eb',bg:'#eff6ff'},
@@ -28,21 +34,11 @@ const CAT: Record<string,{icon:string;cor:string;bg:string}> = {
   varejo:{icon:'🛍',cor:'#d97706',bg:'#fffbeb'},
   outros:{icon:'🏪',cor:'#6b7280',bg:'#f4f5f7'},
 }
-
-// Cor do pin no mapa por status — pós-venda sem ação = AZUL
 const STATUS_COR: Record<string,string> = {
-  ativo:'#2563eb',           // azul — sem ação ainda
-  novo_lead:'#8b5cf6',       // roxo
-  visita_realizada:'#0891b2',// ciano
-  em_negociacao:'#d97706',   // âmbar
-  ligar:'#7c3aed',           // violeta
-  retornar:'#06b6d4',        // turquesa
-  proposta_enviada:'#ea580c',// laranja
-  problema:'#dc2626',        // vermelho
-  sem_contato:'#64748b',     // cinza
-  fechado:'#16a34a',         // verde — SÓ fechado é verde
+  ativo:'#2563eb', novo_lead:'#8b5cf6', visita_realizada:'#0891b2',
+  em_negociacao:'#d97706', ligar:'#7c3aed', retornar:'#06b6d4',
+  proposta_enviada:'#ea580c', problema:'#dc2626', sem_contato:'#64748b', fechado:'#16a34a',
 }
-
 const SC: Record<string,{label:string;icon:string;cor:string;bg:string;border:string}> = {
   ativo:            {label:'Ativo',            icon:'🔵',cor:'#2563eb',bg:'#eff6ff',border:'#93c5fd'},
   novo_lead:        {label:'Novo Lead',        icon:'⭐',cor:'#8b5cf6',bg:'#f5f3ff',border:'#c4b5fd'},
@@ -55,19 +51,18 @@ const SC: Record<string,{label:string;icon:string;cor:string;bg:string;border:st
   sem_contato:      {label:'Sem Contato',      icon:'❄️',cor:'#64748b',bg:'#f8fafc',border:'#cbd5e1'},
   fechado:          {label:'Produto Fechado',  icon:'🏆',cor:'#16a34a',bg:'#f0fdf4',border:'#4ade80'},
 }
-
 const SA: Record<string,string> = {contato:'visita_realizada',ausente:'ligar',problema:'problema',expansao:'em_negociacao'}
 const PO = ['novo_lead','ativo','visita_realizada','em_negociacao','ligar','retornar','proposta_enviada','problema','sem_contato','fechado']
+const RES_LABEL: Record<string,string> = {contato:'✅ Contato feito',ausente:'😔 Ausente',problema:'⚠️ Problema',expansao:'🚀 Expansão'}
+const RES_COR: Record<string,string> = {contato:'#f0fdf4',ausente:'#fffbeb',problema:'#fef2f2',expansao:'#eff6ff'}
+const RES_ICON: Record<string,string> = {contato:'✅',ausente:'😔',problema:'⚠️',expansao:'🚀'}
 
-// Produtos para COMÉRCIOS — taxa em %
 const PRODS_COM = [
   {id:21,nome:'Credenciamento', icon:'🏪',desc:'Credenciar na rede Vegas',   tipo:'taxa'},
   {id:22,nome:'Clube Vegas',    icon:'🎁',desc:'Programa de vantagens',      tipo:'livre'},
   {id:23,nome:'Cash Clube',     icon:'💰',desc:'Cashback e benefícios',      tipo:'taxa'},
   {id:24,nome:'Vegas Pay',      icon:'💳',desc:'Solução de pagamentos Vegas', tipo:'taxa'},
 ]
-
-// Produtos para FUNCIONÁRIOS
 const PRODS_EMP = [
   {id:1, nome:'Alimentação',      icon:'🍽',cat:'Benefícios',tipo:'beneficio',desc:'Benefício alimentação'},
   {id:2, nome:'Refeição',         icon:'🥘',cat:'Benefícios',tipo:'beneficio',desc:'Benefício refeição'},
@@ -82,7 +77,6 @@ const PRODS_EMP = [
   {id:11,nome:'Vidalink',         icon:'💊',cat:'Agregado',  tipo:'agregado', desc:'Auxílio Farmácia'},
   {id:12,nome:'Seguro MAC+Auto',  icon:'🚗',cat:'Agregado',  tipo:'agregado', desc:'Seguro de vida + automóvel'},
 ]
-
 const SEGMENTOS = ['Alimentação','Farmácia','Combustível','Varejo','Restaurante/Bar','Serviços','Saúde','Outros']
 
 function cd(la1:number,lo1:number,la2:number,lo2:number){const R=6371000,dL=(la2-la1)*Math.PI/180,dG=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))}
@@ -91,6 +85,7 @@ function S(s:string){return SC[s]||SC.ativo}
 function pinCor(c:Comercio):string{return STATUS_COR[c.status_crm||'ativo']||'#2563eb'}
 function segTocat(seg:string):string{const m:Record<string,string>={'Alimentação':'supermercado','Farmácia':'farmacia','Combustível':'posto','Restaurante/Bar':'restaurante','Varejo':'varejo'};return m[seg]||'outros'}
 function calcTotal(func:string,vlr:string):string{const f=parseInt(func),v=parseFloat(vlr.replace(',','.'));if(isNaN(f)||isNaN(v)||f<=0||v<=0)return '';return 'R$'+(f*v).toLocaleString('pt-BR',{minimumFractionDigits:2})}
+function fmtData(iso:string):string{try{return new Date(iso).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch{return iso}}
 
 export default function PosVendaPage(){
   const sb=createClient(),router=useRouter(),mr=useRef<any>(null),mi=useRef<any>(null)
@@ -99,10 +94,12 @@ export default function PosVendaPage(){
   const [ab,setAb]=useState<'lista'|'pipeline'|'mapa'|'historico'>('lista')
   const [vs,setVs]=useState<Visita[]>([])
   const [mo,setMo]=useState(false),[de,setDe]=useState(false)
+  const [abaDetalhe,setAbaDetalhe]=useState<'negociacao'|'historico'>('negociacao')
+  const [historico,setHistorico]=useState<HistoricoItem[]>([]),[carregandoHist,setCarregandoHist]=useState(false)
   const [csel,setCsel]=useState<Comercio|null>(null),[rs,setRs]=useState('')
   const [ob,setOb]=useState(''),[pd,setPd]=useState('')
   const [psEmp,setPsEmp]=useState<number[]>([]),[psCom,setPsCom]=useState<number[]>([])
-  const [negEmp,setNegEmp]=useState<Record<number,{func:string;vlr:string}>>({})
+  const [negEmp,setNegEmp]=useState<Record<number,NegEmpItem>>({})
   const [negCom,setNegCom]=useState<Record<number,NegItem>>({})
   const [gla,setGla]=useState<number|null>(null),[glo,setGlo]=useState<number|null>(null)
   const [gs,setGs]=useState<'loading'|'ok'>('loading'),[gm,setGm]=useState('Capturando localização...')
@@ -128,12 +125,38 @@ export default function PosVendaPage(){
     async function lv(){
       const h=new Date().toISOString().split('T')[0]
       const{data}=await sb.from('visitas_campo').select('*').gte('data_visita',h).order('data_visita',{ascending:false})
-      if(data)setVs(data.map((v:any)=>({nome_fantasia:v.nome_fantasia,resultado:v.resultado,observacao:v.observacao||'',latitude:v.latitude,longitude:v.longitude,hora:new Date(v.data_visita).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),tipo_origem:v.tipo_estabelecimento})))
+      if(data)setVs(data.map((v:any)=>({id:v.id,nome_fantasia:v.nome_fantasia,resultado:v.resultado,observacao:v.observacao||'',latitude:v.latitude,longitude:v.longitude,hora:new Date(v.data_visita).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),data_visita:v.data_visita})))
     }
     lv()
   },[sc,scLead])
 
   useEffect(()=>{if(ab==='mapa'&&!mi.current)setTimeout(im,300)},[ab,cs])
+
+  // Carrega histórico quando abre detalhe ou muda aba
+  useEffect(()=>{
+    if(de&&csel&&abaDetalhe==='historico'){
+      carregarHistorico(csel.nome_fantasia)
+    }
+  },[de,csel,abaDetalhe])
+
+  async function carregarHistorico(nome:string){
+    setCarregandoHist(true)
+    const{data}=await sb.from('visitas_campo')
+      .select('id,resultado,observacao,data_visita')
+      .eq('nome_fantasia',nome)
+      .order('data_visita',{ascending:false})
+      .limit(50)
+    if(data){
+      setHistorico(data.map((v:any)=>({
+        id:v.id,
+        resultado:v.resultado,
+        observacao:v.observacao||'',
+        data_visita:v.data_visita,
+        hora:new Date(v.data_visita).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+      })))
+    }
+    setCarregandoHist(false)
+  }
 
   function cgi(){if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{setGla(p.coords.latitude);setGlo(p.coords.longitude)},()=>{},{timeout:10000,enableHighAccuracy:true})}
 
@@ -148,12 +171,8 @@ export default function PosVendaPage(){
     if(gla&&glo){const ic=L.divIcon({className:'',html:`<div style="width:16px;height:16px;background:#2563eb;border-radius:50%;border:3px solid white;box-shadow:0 0 0 6px rgba(37,99,235,0.2)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});L.marker([gla,glo],{icon:ic}).addTo(map).bindPopup('<b>📍 Você está aqui</b>')}
     cs.forEach(c2=>{
       if(!c2.latitude||!c2.longitude)return
-      const ci=CAT[c2.categoria]||CAT.outros
-      const cor=pinCor(c2)
-      const vt=vs.find(v=>v.nome_fantasia===c2.nome_fantasia)
-      const isLead=c2.tipo_origem==='lead'
-      const st=S(c2.status_crm||'ativo')
-      const ic=L.divIcon({className:'',html:`<div style="width:30px;height:30px;background:${cor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:12px">${vt?'✓':isLead?'⭐':ci.icon}</span></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-32]})
+      const ci=CAT[c2.categoria]||CAT.outros,cor=pinCor(c2),st=S(c2.status_crm||'ativo'),isLead=c2.tipo_origem==='lead'
+      const ic=L.divIcon({className:'',html:`<div style="width:30px;height:30px;background:${cor};border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center"><span style="transform:rotate(45deg);font-size:12px">${isLead?'⭐':ci.icon}</span></div>`,iconSize:[30,30],iconAnchor:[15,30],popupAnchor:[0,-32]})
       const dist=gla&&glo?fd(cd(gla,glo,c2.latitude!,c2.longitude!)):''
       L.marker([c2.latitude,c2.longitude],{icon:ic}).addTo(map).bindPopup(`<div style="font-family:sans-serif;min-width:190px"><b style="font-size:13px">${c2.nome_fantasia}</b><div style="font-size:11px;color:#6b7280;margin:3px 0">${c2.endereco?.split(' - ')[0]}</div><div style="background:${st.bg};color:${st.cor};padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;display:inline-block;margin:4px 0">${st.icon} ${st.label}</div>${dist?`<div style="font-size:11px;color:#2563eb;font-weight:600;margin-top:2px">📍 ${dist}</div>`:''}<button onclick="window.__aC('${c2.id}')" style="margin-top:8px;background:#2563eb;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:sans-serif;width:100%">Ver + Registrar visita</button></div>`,{maxWidth:220})
     })
@@ -174,8 +193,21 @@ export default function PosVendaPage(){
   const totalLeads=cs.filter(c=>c.tipo_origem==='lead').length
   const totalPv=cs.filter(c=>c.tipo_origem!=='lead').length
 
-  function abrirDetalhe(c:Comercio){setCsel(c);setPsEmp([]);setPsCom([]);setNegEmp({});setNegCom({});setRs('');setOb('');setPd('');setSc(false);setModoLead(false);setDe(true)}
-  function abrirModalVisita(){setCsel(null);setRs('');setOb('');setBm('');setPd('');setSc(false);setModoLead(false);setNlNome('');setNlTel('');setNlEnd('');setNlCep('');setNlSeg('');setNlResp('');setNlObs('');setGs('loading');setGm('Capturando localização...');setMo(true);cgm()}
+  function abrirDetalhe(c:Comercio){
+    setCsel(c);setPsEmp([]);setPsCom([]);setNegEmp({});setNegCom({})
+    setRs('');setOb('');setPd('');setSc(false);setModoLead(false)
+    setAbaDetalhe('negociacao');setHistorico([])
+    setDe(true)
+  }
+
+  function abrirModalVisita(){
+    setCsel(null);setRs('');setOb('');setBm('');setPd('');setSc(false)
+    setModoLead(false);setNlNome('');setNlTel('');setNlEnd('')
+    setNlCep('');setNlSeg('');setNlResp('');setNlObs('')
+    setGs('loading');setGm('Capturando localização...')
+    setMo(true);cgm()
+  }
+
   function iniciarNovoLead(){setModoLead(true);setNlNome(bm)}
 
   function cgm(){
@@ -185,13 +217,13 @@ export default function PosVendaPage(){
     else{setGs('ok');setGm('GPS não disponível')}
   }
 
-  function updNegEmp(id:number,campo:'func'|'vlr',val:string){setNegEmp(prev=>({...prev,[id]:{...(prev[id]||{func:'',vlr:''}),[campo]:val}}))}
+  function updNegEmp(id:number,campo:'func'|'vlr'|'obs',val:string){setNegEmp(prev=>({...prev,[id]:{...(prev[id]||{func:'',vlr:'',obs:''}),[campo]:val}}))}
   function updNegCom(id:number,campo:'valor'|'obs',val:string){setNegCom(prev=>({...prev,[id]:{...(prev[id]||{valor:'',obs:''}),[campo]:val}}))}
 
   function resumoNegociacao():string{
     const p:string[]=[]
-    psEmp.forEach(id=>{const pr=PRODS_EMP.find(x=>x.id===id);const n=negEmp[id];if(pr&&n?.func&&n?.vlr)p.push(`${pr.nome}: ${n.func}func × R$${n.vlr}=${calcTotal(n.func,n.vlr)}/mês`)})
-    psCom.forEach(id=>{const pr=PRODS_COM.find(x=>x.id===id);const n=negCom[id];if(pr){const v=n?.valor?`${n.valor}${pr.tipo==='taxa'?'%':''}`:'-';p.push(`${pr.nome}: ${v}${n?.obs?` (${n.obs})`:''}`)}})
+    psEmp.forEach(id=>{const pr=PRODS_EMP.find(x=>x.id===id);const n=negEmp[id];if(pr){const v=n?.func&&n?.vlr?`${n.func}func × R$${n.vlr}=${calcTotal(n.func,n.vlr)}/mês`:'selecionado';const o=n?.obs?` (${n.obs})`:'';p.push(`${pr.nome}: ${v}${o}`)}})
+    psCom.forEach(id=>{const pr=PRODS_COM.find(x=>x.id===id);const n=negCom[id];if(pr){const v=n?.valor?`${n.valor}${pr.tipo==='taxa'?'%':''}`:'-';const o=n?.obs?` (${n.obs})`:'';p.push(`${pr.nome}: ${v}${o}`)}})
     return p.join(' | ')
   }
 
@@ -226,7 +258,7 @@ export default function PosVendaPage(){
     const oc=[ob,resumo?`Negociação: ${resumo}`:''].filter(Boolean).join(' | ')
     await sb.from('visitas_campo').insert({vendedor_id:usr?.id,nome_fantasia:csel.nome_fantasia,tipo_estabelecimento:csel.categoria,latitude:gla??-22.7330,longitude:glo??-47.3340,resultado:rs,observacao:oc||null,data_visita:new Date().toISOString()})
     await sb.from('comercios_credenciados').update({status_crm:ns,data_ultimo_contato:new Date().toISOString().split('T')[0],data_proximo_contato:pd||null,produtos_negociando:todosProds.length>0?todosProds:null,obs_crm:ob||null}).eq('id',csel.id)
-    setCs(prev=>prev.map(c=>c.id===csel.id?{...c,status_crm:ns,produtos_negociando:todosProds}:c))
+    setCs(prev=>prev.map(c=>c.id===csel.id?{...c,status_crm:ns,produtos_negociando:todosProds,obs_crm:ob||undefined}:c))
     setSv(false);setSc(true);setDe(false)
   }
 
@@ -274,10 +306,9 @@ export default function PosVendaPage(){
 
       <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
 
-        {/* LISTA — altura limitada com scroll interno */}
+        {/* LISTA */}
         {ab==='lista'&&(
           <div style={{display:'flex',flexDirection:'column',flex:1,overflow:'hidden'}}>
-            {/* Filtros fixos */}
             <div style={{padding:'10px 14px',borderBottom:'1px solid #e8eaed',background:'#fff',flexShrink:0}}>
               <div style={{display:'flex',gap:6,marginBottom:7,flexWrap:'wrap',alignItems:'center'}}>
                 {[{k:'todos',l:'Todos'},{k:'posvendas',l:'🏪 Pós-venda'},{k:'leads',l:'⭐ Leads'}].map(f=>(
@@ -286,21 +317,18 @@ export default function PosVendaPage(){
                 {gla&&<button onClick={()=>setOp(!op)} style={{padding:'5px 12px',borderRadius:20,fontSize:12,fontWeight:700,cursor:'pointer',border:`1.5px solid ${op?'#16a34a':'#e8eaed'}`,background:op?'#16a34a':'#f4f5f7',color:op?'#fff':'#6b7280',fontFamily:'inherit',marginLeft:'auto'}}>📍 Próx.</button>}
               </div>
               <input type="text" placeholder="🔍 Buscar comércio..." value={bk} onChange={e=>setBk(e.target.value)} style={{...inp,marginBottom:7}}/>
-              {/* Filtros de status */}
               <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-                {[{k:'',l:'Todos status'},{k:'ativo',l:'🔵 Ativo'},{k:'novo_lead',l:'⭐ Lead'},{k:'em_negociacao',l:'🔥 Neg.'},{k:'visita_realizada',l:'✅ Visita'},{k:'ligar',l:'📞 Ligar'},{k:'proposta_enviada',l:'📄 Proposta'},{k:'problema',l:'⚠️ Prob.'},{k:'sem_contato',l:'❄️ Sem contato'},{k:'fechado',l:'🏆 Fechado'}].map(f=>(
+                {[{k:'',l:'Todos'},{k:'ativo',l:'🔵 Ativo'},{k:'novo_lead',l:'⭐ Lead'},{k:'em_negociacao',l:'🔥 Neg.'},{k:'visita_realizada',l:'✅ Visita'},{k:'ligar',l:'📞 Ligar'},{k:'proposta_enviada',l:'📄 Proposta'},{k:'problema',l:'⚠️ Prob.'},{k:'sem_contato',l:'❄️ S.Contato'},{k:'fechado',l:'🏆 Fechado'}].map(f=>(
                   <button key={f.k} onClick={()=>setSf(f.k)} style={{padding:'4px 9px',borderRadius:20,fontSize:10.5,fontWeight:600,cursor:'pointer',border:`1.5px solid ${sf===f.k?'#2563eb':'#e8eaed'}`,background:sf===f.k?'#2563eb':'#f4f5f7',color:sf===f.k?'#fff':'#6b7280',fontFamily:'inherit'}}>{f.l}</button>
                 ))}
               </div>
             </div>
-            {/* Lista com scroll limitado */}
             <div style={{flex:1,overflowY:'auto',minHeight:0}}>
-              {filt.length===0&&<div style={{padding:30,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:28,marginBottom:8}}>🔍</div><div>Nenhum comércio encontrado</div></div>}
+              {filt.length===0&&<div style={{padding:30,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:28,marginBottom:8}}>🔍</div><div>Nenhum encontrado</div></div>}
               {filt.map(c=>{
                 const ci=CAT[c.categoria]||CAT.outros,st=S(c.status_crm||'ativo'),isLead=c.tipo_origem==='lead',vt=vs.find(v=>v.nome_fantasia===c.nome_fantasia)
-                const corPin=pinCor(c)
                 return(
-                  <div key={c.id} onClick={()=>abrirDetalhe(c)} style={{padding:'12px 16px',borderBottom:'1px solid #e8eaed',background:'#fff',cursor:'pointer',borderLeft:`3px solid ${corPin}`}}
+                  <div key={c.id} onClick={()=>abrirDetalhe(c)} style={{padding:'12px 16px',borderBottom:'1px solid #e8eaed',background:'#fff',cursor:'pointer',borderLeft:`3px solid ${pinCor(c)}`}}
                     onMouseEnter={e=>(e.currentTarget.style.background='#fafbfc')} onMouseLeave={e=>(e.currentTarget.style.background='#fff')}>
                     <div style={{display:'flex',alignItems:'flex-start',gap:10}}>
                       <div style={{width:38,height:38,borderRadius:10,background:isLead?'#f5f3ff':ci.bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>{isLead?'⭐':ci.icon}</div>
@@ -351,23 +379,23 @@ export default function PosVendaPage(){
         {ab==='mapa'&&(
           <div style={{flex:1,position:'relative'}}>
             <div ref={mr} style={{height:'100%',width:'100%'}}/>
-            <div style={{position:'absolute',top:12,left:12,zIndex:500,background:'rgba(255,255,255,0.97)',border:'1px solid #e8eaed',borderRadius:12,padding:'10px 14px',boxShadow:'0 4px 14px rgba(0,0,0,.08)',fontSize:11}}>
+            <div style={{position:'absolute',top:12,left:12,zIndex:500,background:'rgba(255,255,255,0.97)',border:'1px solid #e8eaed',borderRadius:12,padding:'10px 14px',fontSize:11}}>
               <div style={{fontWeight:700,marginBottom:7,color:'#111827',fontSize:12}}>Legenda</div>
-              {[['#2563eb','Pós-venda (sem ação)'],['#8b5cf6','Lead/Prospecção'],['#d97706','Em Negociação'],['#0891b2','Visita Realizada'],['#ea580c','Proposta Enviada'],['#dc2626','Problema'],['#64748b','Sem Contato'],['#16a34a','Produto Fechado']].map(([cor,lbl2])=>(
-                <div key={lbl2} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}><div style={{width:10,height:10,borderRadius:'50%',background:cor,flexShrink:0}}/><span style={{color:'#374151'}}>{lbl2}</span></div>
+              {[['#2563eb','Pós-venda (sem ação)'],['#8b5cf6','Lead'],['#d97706','Em Negociação'],['#0891b2','Visita Realizada'],['#ea580c','Proposta Enviada'],['#dc2626','Problema'],['#64748b','Sem Contato'],['#16a34a','Produto Fechado']].map(([cor,lb])=>(
+                <div key={lb} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}><div style={{width:10,height:10,borderRadius:'50%',background:cor,flexShrink:0}}/><span>{lb}</span></div>
               ))}
             </div>
             <button onClick={abrirModalVisita} style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',zIndex:500,background:'#16a34a',color:'#fff',border:'none',borderRadius:50,padding:'12px 20px',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'inherit',boxShadow:'0 4px 20px rgba(22,163,74,0.4)'}}>📍 Registrar Visita Aqui</button>
           </div>
         )}
 
-        {/* HISTÓRICO */}
+        {/* HISTÓRICO DO DIA */}
         {ab==='historico'&&(
           <div style={{flex:1,overflowY:'auto',padding:14}}>
             {vs.length===0?<div style={{padding:40,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:36,marginBottom:10}}>📋</div><div style={{fontWeight:600}}>Nenhuma visita hoje</div></div>:vs.map((v,i)=>(
               <div key={i} style={{background:'#fff',border:'1px solid #e8eaed',borderRadius:12,padding:14,marginBottom:9}}>
                 <div style={{display:'flex',alignItems:'center',gap:11}}>
-                  <div style={{width:36,height:36,borderRadius:9,background:v.resultado==='contato'?'#f0fdf4':v.resultado==='expansao'?'#eff6ff':v.resultado==='problema'?'#fef2f2':'#fffbeb',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17}}>{v.resultado==='contato'?'✅':v.resultado==='ausente'?'😔':v.resultado==='problema'?'⚠️':'🚀'}</div>
+                  <div style={{width:36,height:36,borderRadius:9,background:RES_COR[v.resultado]||'#f4f5f7',display:'flex',alignItems:'center',justifyContent:'center',fontSize:17}}>{RES_ICON[v.resultado]||'📋'}</div>
                   <div style={{flex:1}}><div style={{fontWeight:700,fontSize:13}}>{v.nome_fantasia}</div><div style={{fontSize:11,color:'#6b7280',marginTop:1}}>{v.hora}</div></div>
                   {v.latitude&&<div style={{fontSize:10,color:'#16a34a',fontWeight:600}}>📍 GPS</div>}
                 </div>
@@ -378,136 +406,198 @@ export default function PosVendaPage(){
         )}
       </div>
 
-      {/* MODAL DETALHE CRM */}
+      {/* ══ MODAL DETALHE CRM ══ */}
       {de&&csel&&(
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:1000,backdropFilter:'blur(3px)'}}>
-          <div style={{background:'#fff',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:600,maxHeight:'94vh',overflowY:'auto'}}>
-            <div style={{width:38,height:4,background:'#d1d5db',borderRadius:2,margin:'11px auto 0'}}/>
-            <div style={{padding:'14px 18px',borderBottom:'1px solid #e8eaed',display:'flex',alignItems:'flex-start',gap:13}}>
-              <div style={{width:48,height:48,borderRadius:13,background:csel.tipo_origem==='lead'?'#f5f3ff':(CAT[csel.categoria]||CAT.outros).bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{csel.tipo_origem==='lead'?'⭐':(CAT[csel.categoria]||CAT.outros).icon}</div>
+          <div style={{background:'#fff',borderRadius:'22px 22px 0 0',width:'100%',maxWidth:620,maxHeight:'96vh',display:'flex',flexDirection:'column'}}>
+            <div style={{width:38,height:4,background:'#d1d5db',borderRadius:2,margin:'11px auto 0',flexShrink:0}}/>
+
+            {/* Header fixo */}
+            <div style={{padding:'14px 18px',borderBottom:'1px solid #e8eaed',display:'flex',alignItems:'flex-start',gap:13,flexShrink:0}}>
+              <div style={{width:46,height:46,borderRadius:12,background:csel.tipo_origem==='lead'?'#f5f3ff':(CAT[csel.categoria]||CAT.outros).bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>{csel.tipo_origem==='lead'?'⭐':(CAT[csel.categoria]||CAT.outros).icon}</div>
               <div style={{flex:1}}>
                 <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
-                  <div style={{fontSize:17,fontWeight:800,color:'#111827'}}>{csel.nome_fantasia}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'#111827'}}>{csel.nome_fantasia}</div>
                   {csel.tipo_origem==='lead'&&<span style={{background:'#f5f3ff',color:'#8b5cf6',fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,border:'1px solid #c4b5fd'}}>NOVO LEAD</span>}
                 </div>
-                <div style={{fontSize:11.5,color:'#6b7280',marginTop:2}}>{csel.subgrupo} · {csel.endereco?.split(' - ')[0]}</div>
-                <div style={{display:'flex',gap:7,marginTop:5,flexWrap:'wrap'}}>
+                <div style={{fontSize:11,color:'#6b7280',marginTop:2}}>{csel.subgrupo} · {csel.endereco?.split(' - ')[0]}</div>
+                <div style={{display:'flex',gap:6,marginTop:4,flexWrap:'wrap'}}>
                   {csel.telefone&&<span style={{background:'#f4f5f7',color:'#374151',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>📞 {csel.telefone}</span>}
                   {csel.distancia!=null&&<span style={{background:'#f0fdf4',color:'#16a34a',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>📍 {fd(csel.distancia)}</span>}
+                  {csel.data_proximo_contato&&<span style={{background:'#fffbeb',color:'#d97706',fontSize:10.5,fontWeight:600,padding:'2px 8px',borderRadius:20}}>📅 Retorno: {new Date(csel.data_proximo_contato).toLocaleDateString('pt-BR')}</span>}
                 </div>
               </div>
-              <span onClick={()=>setDe(false)} style={{fontSize:20,color:'#9ca3af',cursor:'pointer',padding:4}}>✕</span>
+              <span onClick={()=>setDe(false)} style={{fontSize:20,color:'#9ca3af',cursor:'pointer',padding:4,flexShrink:0}}>✕</span>
             </div>
 
-            <div style={{padding:'14px 18px 28px'}}>
-              {/* STATUS */}
-              <div style={{marginBottom:14}}>
-                <div style={lbl}>Status de Relacionamento</div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:5}}>
-                  {PO.map(s=>{const st=S(s),at=(csel.status_crm||'ativo')===s;return(
-                    <button key={s} onClick={()=>asmn(csel.id,s)} style={{padding:'7px 4px',borderRadius:8,border:`2px solid ${at?st.cor:st.border}`,background:at?st.bg:'#f4f5f7',cursor:'pointer',fontFamily:'inherit',textAlign:'center'}}>
-                      <div style={{fontSize:14}}>{st.icon}</div>
-                      <div style={{fontSize:9,fontWeight:700,color:at?st.cor:'#6b7280',marginTop:2,lineHeight:1.2}}>{st.label}</div>
-                    </button>
-                  )})}
-                </div>
+            {/* STATUS fixo */}
+            <div style={{padding:'10px 18px',borderBottom:'1px solid #e8eaed',flexShrink:0}}>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:5}}>
+                {PO.map(s=>{const st=S(s),at=(csel.status_crm||'ativo')===s;return(
+                  <button key={s} onClick={()=>asmn(csel.id,s)} style={{padding:'6px 4px',borderRadius:8,border:`2px solid ${at?st.cor:st.border}`,background:at?st.bg:'#f4f5f7',cursor:'pointer',fontFamily:'inherit',textAlign:'center'}}>
+                    <div style={{fontSize:13}}>{st.icon}</div>
+                    <div style={{fontSize:8.5,fontWeight:700,color:at?st.cor:'#6b7280',marginTop:2,lineHeight:1.2}}>{st.label}</div>
+                  </button>
+                )})}
               </div>
+            </div>
 
-              {/* DADOS */}
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
-                {[{l:'Endereço',v:csel.endereco},{l:'Telefone',v:csel.telefone||'—'},{l:'Segmento',v:csel.subgrupo},{l:'Contrato',v:csel.contrato}].map(f=>(
-                  <div key={f.l}><div style={lbl}>{f.l}</div><div style={{fontSize:12,fontWeight:500,color:'#111827',wordBreak:'break-word'}}>{f.v}</div></div>
-                ))}
-              </div>
+            {/* ABAS Negociação / Histórico */}
+            <div style={{display:'flex',borderBottom:'1px solid #e8eaed',flexShrink:0,background:'#fff'}}>
+              {[{k:'negociacao',l:'📦 Negociação'},{k:'historico',l:`📋 Histórico (${historico.length})`}].map(t=>(
+                <div key={t.k} onClick={()=>setAbaDetalhe(t.k as any)} style={{padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer',color:abaDetalhe===t.k?'#2563eb':'#6b7280',borderBottom:`2px solid ${abaDetalhe===t.k?'#2563eb':'transparent'}`,marginBottom:-1}}>{t.l}</div>
+              ))}
+            </div>
 
-              {/* PRODUTOS VEGAS PARA COMÉRCIO */}
-              <div style={{marginBottom:14}}>
-                <div style={{...lbl,marginBottom:8}}>🏪 Produtos Vegas para este comércio</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
-                  {PRODS_COM.map(p=>{const sl=psCom.includes(p.id);return(
-                    <div key={p.id} onClick={()=>setPsCom(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'10px 11px',borderRadius:9,border:`2px solid ${sl?'#2563eb':'#e8eaed'}`,background:sl?'#eff6ff':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{fontSize:18}}>{p.icon}</span>
-                      <div style={{flex:1}}><div style={{fontSize:12,fontWeight:700,color:sl?'#1d4ed8':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
-                      {sl&&<span style={{color:'#2563eb',fontSize:13,fontWeight:700}}>✓</span>}
+            {/* CONTEÚDO COM SCROLL */}
+            <div style={{flex:1,overflowY:'auto',minHeight:0}}>
+
+              {/* ABA NEGOCIAÇÃO */}
+              {abaDetalhe==='negociacao'&&(
+                <div style={{padding:'14px 18px 28px'}}>
+
+                  {/* Últimas negociações salvas */}
+                  {csel.produtos_negociando&&csel.produtos_negociando.length>0&&(
+                    <div style={{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:10,padding:'11px 13px',marginBottom:14}}>
+                      <div style={{fontSize:10.5,fontWeight:700,color:'#92400e',marginBottom:5,textTransform:'uppercase',letterSpacing:'.5px'}}>🔥 Em negociação</div>
+                      <div style={{fontSize:12.5,color:'#374151'}}>{Array.isArray(csel.produtos_negociando)?csel.produtos_negociando.join(', '):csel.produtos_negociando}</div>
+                      {csel.obs_crm&&<div style={{fontSize:12,color:'#6b7280',marginTop:5,fontStyle:'italic'}}>"{csel.obs_crm}"</div>}
                     </div>
-                  )})}
-                </div>
-                {/* Detalhes negociação por produto de comércio */}
-                {psCom.length>0&&(
-                  <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:9,padding:'11px 13px'}}>
-                    <div style={{fontSize:11,fontWeight:700,color:'#1d4ed8',marginBottom:8}}>💰 Detalhes da negociação</div>
-                    {psCom.map(id=>{
-                      const p=PRODS_COM.find(x=>x.id===id);if(!p)return null
-                      const n=negCom[id]||{valor:'',obs:''}
-                      return(
-                        <div key={id} style={{marginBottom:10,paddingBottom:10,borderBottom:'1px solid #dbeafe'}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#374151',marginBottom:6}}>{p.icon} {p.nome}</div>
-                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-                            <div>
-                              <label style={lbl}>{p.tipo==='taxa'?'Taxa adm. negociada (%)':'Valor negociado'}</label>
-                              <div style={{display:'flex',alignItems:'center',gap:4}}>
-                                <input type="text" value={n.valor} onChange={e=>updNegCom(id,'valor',e.target.value)} placeholder={p.tipo==='taxa'?'Ex: 3,50':'Ex: 200,00'} style={{...inpSm}}/>
-                                {p.tipo==='taxa'&&<span style={{fontSize:14,fontWeight:700,color:'#2563eb',flexShrink:0}}>%</span>}
-                              </div>
-                            </div>
-                            <div>
-                              <label style={lbl}>Observação</label>
-                              <input type="text" value={n.obs} onChange={e=>updNegCom(id,'obs',e.target.value)} placeholder="Ex: mensal, com carência..." style={inpSm}/>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
+                  )}
 
-              {/* PRODUTOS PARA FUNCIONÁRIOS */}
-              <div style={{marginBottom:14}}>
-                <div style={{...lbl,marginBottom:8}}>👥 Produtos para funcionários</div>
-                {['Benefícios','Convênio','Agregado'].map(cat=>(
-                  <div key={cat} style={{marginBottom:10}}>
-                    <div style={{fontSize:10,fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}}>{cat}</div>
-                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-                      {PRODS_EMP.filter(p=>p.cat===cat).map(p=>{const sl=psEmp.includes(p.id);return(
-                        <div key={p.id} onClick={()=>setPsEmp(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'9px 10px',borderRadius:9,border:`2px solid ${sl?'#16a34a':'#e8eaed'}`,background:sl?'#f0fdf4':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
-                          <span style={{fontSize:16}}>{p.icon}</span>
-                          <div style={{flex:1}}><div style={{fontSize:11.5,fontWeight:700,color:sl?'#15803d':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
-                          {sl&&<span style={{color:'#16a34a',fontSize:12,fontWeight:700}}>✓</span>}
+                  {/* Dados */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:14}}>
+                    {[{l:'Endereço',v:csel.endereco},{l:'Contrato',v:csel.contrato},{l:'Segmento',v:csel.subgrupo},{l:'E-mail',v:csel.email||'—'}].map(f=>(<div key={f.l}><div style={lbl}>{f.l}</div><div style={{fontSize:12,fontWeight:500,color:'#111827',wordBreak:'break-word'}}>{f.v}</div></div>))}
+                  </div>
+
+                  {/* PRODUTOS PARA COMÉRCIO */}
+                  <div style={{marginBottom:14}}>
+                    <div style={{...lbl,marginBottom:8}}>🏪 Produtos Vegas para este comércio</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:8}}>
+                      {PRODS_COM.map(p=>{const sl=psCom.includes(p.id);return(
+                        <div key={p.id} onClick={()=>setPsCom(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'9px 10px',borderRadius:9,border:`2px solid ${sl?'#2563eb':'#e8eaed'}`,background:sl?'#eff6ff':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
+                          <span style={{fontSize:17}}>{p.icon}</span>
+                          <div style={{flex:1}}><div style={{fontSize:11.5,fontWeight:700,color:sl?'#1d4ed8':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
+                          {sl&&<span style={{color:'#2563eb',fontSize:12,fontWeight:700}}>✓</span>}
                         </div>
                       )})}
                     </div>
-                    {PRODS_EMP.filter(p=>p.cat===cat&&psEmp.includes(p.id)).map(p=>{
-                      const n=negEmp[p.id]||{func:'',vlr:''}
-                      return(
-                        <div key={p.id} style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:8,padding:'10px 12px',marginTop:5}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#15803d',marginBottom:7}}>{p.icon} {p.nome} — negociação</div>
-                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:7}}>
-                            <div><label style={lbl}>Nº funcionários</label><input type="number" value={n.func} onChange={e=>updNegEmp(p.id,'func',e.target.value)} placeholder="0" style={inpSm}/></div>
-                            <div><label style={lbl}>{p.tipo==='agregado'?'Valor/licença':'Valor/pessoa'}</label><input type="text" value={n.vlr} onChange={e=>updNegEmp(p.id,'vlr',e.target.value)} placeholder="R$ 0,00" style={inpSm}/></div>
-                            <div><label style={lbl}>Total/mês</label><div style={{...inpSm,background:'#dcfce7',color:'#15803d',fontWeight:700,display:'flex',alignItems:'center'}}>{n.func&&n.vlr?calcTotal(n.func,n.vlr):'—'}</div></div>
-                          </div>
-                        </div>
-                      )
-                    })}
+                    {psCom.length>0&&(
+                      <div style={{background:'#eff6ff',border:'1px solid #dbeafe',borderRadius:9,padding:'11px 13px'}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'#1d4ed8',marginBottom:8}}>💰 Detalhes da negociação</div>
+                        {psCom.map(id=>{
+                          const p=PRODS_COM.find(x=>x.id===id);if(!p)return null
+                          const n=negCom[id]||{valor:'',obs:''}
+                          return(
+                            <div key={id} style={{marginBottom:10,paddingBottom:10,borderBottom:'1px solid #dbeafe'}}>
+                              <div style={{fontSize:11,fontWeight:700,color:'#374151',marginBottom:6}}>{p.icon} {p.nome}</div>
+                              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>
+                                <div>
+                                  <label style={lbl}>{p.tipo==='taxa'?'Taxa adm. negociada (%)':'Valor negociado'}</label>
+                                  <div style={{display:'flex',alignItems:'center',gap:4}}>
+                                    <input type="text" value={n.valor} onChange={e=>updNegCom(id,'valor',e.target.value)} placeholder={p.tipo==='taxa'?'Ex: 3,50':'Ex: 200,00'} style={inpSm}/>
+                                    {p.tipo==='taxa'&&<span style={{fontSize:14,fontWeight:700,color:'#2563eb',flexShrink:0}}>%</span>}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label style={lbl}>Observação</label>
+                                  <input type="text" value={n.obs} onChange={e=>updNegCom(id,'obs',e.target.value)} placeholder="Ex: mensal, com carência..." style={inpSm}/>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
 
-              {/* RESULTADO */}
-              <div style={lbl}>Resultado *</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:10}}>
-                {[{k:'contato',l:'✅ Contato feito'},{k:'ausente',l:'😔 Responsável ausente'},{k:'problema',l:'⚠️ Problema'},{k:'expansao',l:'🚀 Interesse em expansão'}].map(r=>(
-                  <button key={r.k} onClick={()=>setRs(r.k)} style={{padding:10,borderRadius:10,border:`2px solid ${rs===r.k?'#2563eb':'#e8eaed'}`,background:rs===r.k?'#eff6ff':'#f4f5f7',cursor:'pointer',fontSize:12.5,fontWeight:600,color:rs===r.k?'#2563eb':'#6b7280',fontFamily:'inherit'}}>{r.l}</button>
-                ))}
-              </div>
-              {rs&&<div style={{background:S(SA[rs]).bg,border:`1px solid ${S(SA[rs]).border}`,borderRadius:8,padding:'9px 12px',marginBottom:10,fontSize:12,fontWeight:600,color:S(SA[rs]).cor}}>Status automático: {S(SA[rs]).icon} {S(SA[rs]).label}</div>}
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-                <div><label style={lbl}>Próximo contato</label><input type="date" value={pd} onChange={e=>setPd(e.target.value)} style={inp}/></div>
-                <div><label style={lbl}>Contrato</label><div style={{...inp,display:'flex',alignItems:'center',fontSize:12,fontWeight:600,color:'#374151'}}>{csel.contrato}</div></div>
-              </div>
-              <div style={{marginBottom:14}}><label style={lbl}>Observação geral</label><textarea rows={2} value={ob} onChange={e=>setOb(e.target.value)} placeholder="Ex: Gerente demonstrou interesse, retornar semana que vem..." style={{...inp,resize:'none'}}/></div>
-              <button onClick={salvar} disabled={sv} style={{width:'100%',padding:14,background:sv?'#86efac':'#16a34a',color:'#fff',border:'none',borderRadius:12,fontSize:14,fontWeight:800,cursor:sv?'not-allowed':'pointer',fontFamily:'inherit'}}>{sv?'Salvando...':'📍 Salvar Visita'}</button>
+                  {/* PRODUTOS PARA FUNCIONÁRIOS */}
+                  <div style={{marginBottom:14}}>
+                    <div style={{...lbl,marginBottom:8}}>👥 Produtos para funcionários</div>
+                    {['Benefícios','Convênio','Agregado'].map(cat=>(
+                      <div key={cat} style={{marginBottom:10}}>
+                        <div style={{fontSize:10,fontWeight:700,color:'#9ca3af',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:5}}>{cat}</div>
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                          {PRODS_EMP.filter(p=>p.cat===cat).map(p=>{const sl=psEmp.includes(p.id);return(
+                            <div key={p.id} onClick={()=>setPsEmp(prev=>prev.includes(p.id)?prev.filter(x=>x!==p.id):[...prev,p.id])} style={{padding:'9px 10px',borderRadius:9,border:`2px solid ${sl?'#16a34a':'#e8eaed'}`,background:sl?'#f0fdf4':'#f4f5f7',cursor:'pointer',display:'flex',alignItems:'center',gap:7}}>
+                              <span style={{fontSize:16}}>{p.icon}</span>
+                              <div style={{flex:1}}><div style={{fontSize:11.5,fontWeight:700,color:sl?'#15803d':'#111827'}}>{p.nome}</div><div style={{fontSize:10,color:'#6b7280'}}>{p.desc}</div></div>
+                              {sl&&<span style={{color:'#16a34a',fontSize:12,fontWeight:700}}>✓</span>}
+                            </div>
+                          )})}
+                        </div>
+                        {/* Detalhes de cada produto selecionado — COM CAMPO OBS */}
+                        {PRODS_EMP.filter(p=>p.cat===cat&&psEmp.includes(p.id)).map(p=>{
+                          const n=negEmp[p.id]||{func:'',vlr:'',obs:''}
+                          return(
+                            <div key={p.id} style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:8,padding:'10px 12px',marginTop:5}}>
+                              <div style={{fontSize:11,fontWeight:700,color:'#15803d',marginBottom:7}}>{p.icon} {p.nome} — negociação</div>
+                              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:7,marginBottom:7}}>
+                                <div><label style={lbl}>Nº funcionários</label><input type="number" value={n.func} onChange={e=>updNegEmp(p.id,'func',e.target.value)} placeholder="0" style={inpSm}/></div>
+                                <div><label style={lbl}>{p.tipo==='agregado'?'Valor/licença':'Valor/pessoa'}</label><input type="text" value={n.vlr} onChange={e=>updNegEmp(p.id,'vlr',e.target.value)} placeholder="R$ 0,00" style={inpSm}/></div>
+                                <div><label style={lbl}>Total/mês</label><div style={{...inpSm,background:'#dcfce7',color:'#15803d',fontWeight:700,display:'flex',alignItems:'center'}}>{n.func&&n.vlr?calcTotal(n.func,n.vlr):'—'}</div></div>
+                              </div>
+                              {/* CAMPO OBS DO PRODUTO */}
+                              <div><label style={lbl}>Observação</label><input type="text" value={n.obs} onChange={e=>updNegEmp(p.id,'obs',e.target.value)} placeholder="Ex: começa em abril, incluir dependentes..." style={inpSm}/></div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* RESULTADO */}
+                  <div style={lbl}>Resultado desta visita *</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7,marginBottom:10}}>
+                    {[{k:'contato',l:'✅ Contato feito'},{k:'ausente',l:'😔 Responsável ausente'},{k:'problema',l:'⚠️ Problema'},{k:'expansao',l:'🚀 Interesse em expansão'}].map(r=>(
+                      <button key={r.k} onClick={()=>setRs(r.k)} style={{padding:10,borderRadius:10,border:`2px solid ${rs===r.k?'#2563eb':'#e8eaed'}`,background:rs===r.k?'#eff6ff':'#f4f5f7',cursor:'pointer',fontSize:12.5,fontWeight:600,color:rs===r.k?'#2563eb':'#6b7280',fontFamily:'inherit'}}>{r.l}</button>
+                    ))}
+                  </div>
+                  {rs&&<div style={{background:S(SA[rs]).bg,border:`1px solid ${S(SA[rs]).border}`,borderRadius:8,padding:'9px 12px',marginBottom:10,fontSize:12,fontWeight:600,color:S(SA[rs]).cor}}>Status automático: {S(SA[rs]).icon} {S(SA[rs]).label}</div>}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                    <div><label style={lbl}>Próximo contato</label><input type="date" value={pd} onChange={e=>setPd(e.target.value)} style={inp}/></div>
+                    <div><label style={lbl}>Contrato</label><div style={{...inp,display:'flex',alignItems:'center',fontSize:12,fontWeight:600,color:'#374151'}}>{csel.contrato}</div></div>
+                  </div>
+                  <div style={{marginBottom:14}}><label style={lbl}>Observação geral</label><textarea rows={2} value={ob} onChange={e=>setOb(e.target.value)} placeholder="Ex: Gerente demonstrou interesse, retornar semana que vem..." style={{...inp,resize:'none'}}/></div>
+                  <button onClick={salvar} disabled={sv} style={{width:'100%',padding:14,background:sv?'#86efac':'#16a34a',color:'#fff',border:'none',borderRadius:12,fontSize:14,fontWeight:800,cursor:sv?'not-allowed':'pointer',fontFamily:'inherit'}}>{sv?'Salvando...':'📍 Salvar Visita'}</button>
+                </div>
+              )}
+
+              {/* ABA HISTÓRICO */}
+              {abaDetalhe==='historico'&&(
+                <div style={{padding:'14px 18px 28px'}}>
+                  {carregandoHist?(
+                    <div style={{padding:30,textAlign:'center',color:'#9ca3af'}}><div style={{fontSize:24,marginBottom:8}}>⏳</div><div>Carregando histórico...</div></div>
+                  ):historico.length===0?(
+                    <div style={{padding:30,textAlign:'center',color:'#9ca3af'}}>
+                      <div style={{fontSize:32,marginBottom:10}}>📋</div>
+                      <div style={{fontWeight:600,marginBottom:4}}>Nenhuma interação registrada</div>
+                      <div style={{fontSize:12}}>As visitas e negociações aparecerão aqui conforme forem sendo salvas.</div>
+                    </div>
+                  ):(
+                    <>
+                      <div style={{fontSize:12,color:'#6b7280',marginBottom:12,fontWeight:500}}>{historico.length} interação{historico.length!==1?'ões':''} registrada{historico.length!==1?'s':''}</div>
+                      {historico.map((h,i)=>(
+                        <div key={h.id} style={{background:'#fff',border:'1px solid #e8eaed',borderRadius:12,padding:'13px 15px',marginBottom:10,borderLeft:`3px solid ${RES_COR[h.resultado]?.replace('f','c')||'#e8eaed'}`}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:h.observacao?8:0}}>
+                            <div style={{width:34,height:34,borderRadius:9,background:RES_COR[h.resultado]||'#f4f5f7',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>{RES_ICON[h.resultado]||'📋'}</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontWeight:700,fontSize:13,color:'#111827'}}>{RES_LABEL[h.resultado]||h.resultado}</div>
+                              <div style={{fontSize:11,color:'#9ca3af',marginTop:1}}>{fmtData(h.data_visita)}</div>
+                            </div>
+                            {i===0&&<span style={{background:'#eff6ff',color:'#2563eb',fontSize:9.5,fontWeight:700,padding:'2px 7px',borderRadius:10}}>Mais recente</span>}
+                          </div>
+                          {h.observacao&&(
+                            <div style={{background:'#f4f5f7',borderRadius:8,padding:'9px 12px',fontSize:12,color:'#374151',lineHeight:1.5}}>
+                              {h.observacao}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -614,7 +704,7 @@ export default function PosVendaPage(){
                     <div style={{fontSize:50,marginBottom:10}}>✅</div>
                     <div style={{fontSize:18,fontWeight:800,marginBottom:5}}>Visita registrada!</div>
                     <div style={{fontSize:13,color:'#6b7280',marginBottom:10}}>{csel?.nome_fantasia}</div>
-                    <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:9,padding:'9px 13px',fontSize:11.5,color:'#16a34a',marginBottom:16}}>📍 {gla?.toFixed(5)}, {glo?.toFixed(5)} · Status atualizado</div>
+                    <div style={{background:'#f0fdf4',border:'1px solid #bbf7d0',borderRadius:9,padding:'9px 13px',fontSize:11.5,color:'#16a34a',marginBottom:16}}>📍 {gla?.toFixed(5)}, {glo?.toFixed(5)} · Salvo no histórico</div>
                     <div style={{display:'flex',gap:9,justifyContent:'center'}}>
                       <button onClick={()=>setMo(false)} style={{background:'#f4f5f7',border:'1px solid #e8eaed',borderRadius:9,padding:'9px 18px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',color:'#374151'}}>Fechar</button>
                       <button onClick={()=>{setSc(false);setCsel(null);setRs('');setOb('');setBm('');cgm()}} style={{background:'#2563eb',color:'#fff',border:'none',borderRadius:9,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>+ Próxima</button>
