@@ -6,12 +6,14 @@ interface ListaComerciosProps {
   comercios: Comercio[]
   visitasHoje: Visita[]
   onAlterarStatus: (id: string, status: string) => void
+  onAbrirDetalhe: (comercio: Comercio) => void
 }
 
 export default function ListaComercios({
   comercios,
   visitasHoje,
   onAlterarStatus,
+  onAbrirDetalhe,
 }: ListaComerciosProps) {
   if (comercios.length === 0) {
     return (
@@ -33,6 +35,7 @@ export default function ListaComercios({
         return (
           <div
             key={c.id}
+            onClick={() => onAbrirDetalhe(c)}
             style={{
               border: '1px solid #e8eaed',
               borderRadius: 12,
@@ -40,6 +43,7 @@ export default function ListaComercios({
               marginBottom: 10,
               background: '#fff',
               borderLeft: `4px solid ${pinCor(c)}`,
+              cursor: 'pointer',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -146,7 +150,10 @@ export default function ListaComercios({
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                   <button
-                    onClick={() => onAlterarStatus(c.id, 'em_negociacao')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAlterarStatus(c.id, 'em_negociacao')
+                    }}
                     style={{
                       background: '#fff7ed',
                       color: '#ea580c',
@@ -162,7 +169,10 @@ export default function ListaComercios({
                   </button>
 
                   <button
-                    onClick={() => onAlterarStatus(c.id, 'fechado')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAlterarStatus(c.id, 'fechado')
+                    }}
                     style={{
                       background: '#f0fdf4',
                       color: '#16a34a',
@@ -178,7 +188,10 @@ export default function ListaComercios({
                   </button>
 
                   <button
-                    onClick={() => onAlterarStatus(c.id, 'ligar')}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAlterarStatus(c.id, 'ligar')
+                    }}
                     style={{
                       background: '#f5f3ff',
                       color: '#7c3aed',
