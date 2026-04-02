@@ -64,7 +64,14 @@ export default function ListaComercios({
               </div>
 
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <div
                     style={{
                       fontWeight: 700,
@@ -96,7 +103,18 @@ export default function ListaComercios({
                   {c.endereco || 'Endereço não informado'}
                 </div>
 
-                <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+                  👤 {c.vendedor_responsavel || 'Sem responsável'}
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 6,
+                    marginTop: 8,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <span
                     style={{
                       background: st.bg,
@@ -143,12 +161,29 @@ export default function ListaComercios({
                 </div>
 
                 {c.produtos_negociando && c.produtos_negociando.length > 0 && (
-                  <div style={{ fontSize: 11, color: '#d97706', marginTop: 8, fontWeight: 600 }}>
-                    🔥 {Array.isArray(c.produtos_negociando) ? c.produtos_negociando.join(', ') : c.produtos_negociando}
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#d97706',
+                      marginTop: 8,
+                      fontWeight: 600,
+                    }}
+                  >
+                    🔥{' '}
+                    {Array.isArray(c.produtos_negociando)
+                      ? c.produtos_negociando.join(', ')
+                      : c.produtos_negociando}
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    marginTop: 12,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
