@@ -7,6 +7,8 @@ interface FiltrosCrmProps {
   onOrigemChange: (valor: 'todos' | 'posvendas' | 'leads') => void
   statusFiltro: string
   onStatusChange: (valor: string) => void
+  responsavelFiltro: string
+  onResponsavelChange: (valor: string) => void
   ordenarPorProximidade: boolean
   onOrdenarPorProximidadeChange: (valor: boolean) => void
   temLocalizacao: boolean
@@ -33,6 +35,8 @@ export default function FiltrosCrm({
   onOrigemChange,
   statusFiltro,
   onStatusChange,
+  responsavelFiltro,
+  onResponsavelChange,
   ordenarPorProximidade,
   onOrdenarPorProximidadeChange,
   temLocalizacao,
@@ -47,7 +51,15 @@ export default function FiltrosCrm({
         marginBottom: 12,
       }}
     >
-      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: 6,
+          marginBottom: 10,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}
+      >
         {[
           { k: 'todos', l: 'Todos' },
           { k: 'posvendas', l: '🏪 Pós-venda' },
@@ -55,14 +67,18 @@ export default function FiltrosCrm({
         ].map((f) => (
           <button
             key={f.k}
-            onClick={() => onOrigemChange(f.k as 'todos' | 'posvendas' | 'leads')}
+            onClick={() =>
+              onOrigemChange(f.k as 'todos' | 'posvendas' | 'leads')
+            }
             style={{
               padding: '6px 12px',
               borderRadius: 20,
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              border: `1.5px solid ${origemFiltro === f.k ? '#2563eb' : '#e8eaed'}`,
+              border: `1.5px solid ${
+                origemFiltro === f.k ? '#2563eb' : '#e8eaed'
+              }`,
               background: origemFiltro === f.k ? '#2563eb' : '#f4f5f7',
               color: origemFiltro === f.k ? '#fff' : '#6b7280',
               fontFamily: 'inherit',
@@ -74,14 +90,18 @@ export default function FiltrosCrm({
 
         {temLocalizacao && (
           <button
-            onClick={() => onOrdenarPorProximidadeChange(!ordenarPorProximidade)}
+            onClick={() =>
+              onOrdenarPorProximidadeChange(!ordenarPorProximidade)
+            }
             style={{
               padding: '6px 12px',
               borderRadius: 20,
               fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
-              border: `1.5px solid ${ordenarPorProximidade ? '#16a34a' : '#e8eaed'}`,
+              border: `1.5px solid ${
+                ordenarPorProximidade ? '#16a34a' : '#e8eaed'
+              }`,
               background: ordenarPorProximidade ? '#16a34a' : '#f4f5f7',
               color: ordenarPorProximidade ? '#fff' : '#6b7280',
               fontFamily: 'inherit',
@@ -93,23 +113,48 @@ export default function FiltrosCrm({
         )}
       </div>
 
-      <input
-        type="text"
-        placeholder="🔍 Buscar comércio por nome..."
-        value={busca}
-        onChange={(e) => onBuscaChange(e.target.value)}
+      <div
         style={{
-          width: '100%',
-          padding: '10px 12px',
-          border: '1.5px solid #e8eaed',
-          borderRadius: 8,
-          fontSize: 13,
-          fontFamily: 'inherit',
-          outline: 'none',
-          background: '#f4f5f7',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 10,
           marginBottom: 10,
         }}
-      />
+      >
+        <input
+          type="text"
+          placeholder="🔍 Buscar comércio por nome..."
+          value={busca}
+          onChange={(e) => onBuscaChange(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1.5px solid #e8eaed',
+            borderRadius: 8,
+            fontSize: 13,
+            fontFamily: 'inherit',
+            outline: 'none',
+            background: '#f4f5f7',
+          }}
+        />
+
+        <input
+          type="text"
+          placeholder="👤 Filtrar por responsável..."
+          value={responsavelFiltro}
+          onChange={(e) => onResponsavelChange(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            border: '1.5px solid #e8eaed',
+            borderRadius: 8,
+            fontSize: 13,
+            fontFamily: 'inherit',
+            outline: 'none',
+            background: '#f4f5f7',
+          }}
+        />
+      </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {STATUS_OPCOES.map((f) => (
@@ -122,7 +167,9 @@ export default function FiltrosCrm({
               fontSize: 10.5,
               fontWeight: 600,
               cursor: 'pointer',
-              border: `1.5px solid ${statusFiltro === f.k ? '#2563eb' : '#e8eaed'}`,
+              border: `1.5px solid ${
+                statusFiltro === f.k ? '#2563eb' : '#e8eaed'
+              }`,
               background: statusFiltro === f.k ? '#2563eb' : '#f4f5f7',
               color: statusFiltro === f.k ? '#fff' : '#6b7280',
               fontFamily: 'inherit',
