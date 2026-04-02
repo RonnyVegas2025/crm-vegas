@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 
 import TopbarCrm from '@/components/crm/TopbarCrm'
 import KpisCrm from '@/components/crm/KpisCrm'
-import TabsCrm from '@/components/crm/TabsCrm'
 import ListaComercios from '@/components/crm/ListaComercios'
 import HistoricoHoje from '@/components/crm/HistoricoHoje'
 import PipelineCrm from '@/components/crm/PipelineCrm'
@@ -29,10 +28,7 @@ import {
   atualizarPosVisita,
 } from '@/services/crmService'
 
-import {
-  buscarVisitasHoje,
-  registrarVisita,
-} from '@/services/visitaService'
+import { buscarVisitasHoje, registrarVisita } from '@/services/visitaService'
 
 export default function PosVendaPage() {
   const sb = createClient()
@@ -41,14 +37,19 @@ export default function PosVendaPage() {
   const [cs, setCs] = useState<Comercio[]>([])
   const [vs, setVs] = useState<Visita[]>([])
   const [lo, setLo] = useState(true)
-  const [ab, setAb] = useState<'lista' | 'pipeline' | 'mapa' | 'historico' | 'dashboard'>('dashboard')
+  const [ab, setAb] = useState<
+    'lista' | 'pipeline' | 'mapa' | 'historico' | 'dashboard'
+  >('dashboard')
   const [usr, setUsr] = useState<any>(null)
   const [gla, setGla] = useState<number | null>(null)
   const [glo, setGlo] = useState<number | null>(null)
 
   const [statusFiltro, setStatusFiltro] = useState<string>('')
   const [busca, setBusca] = useState('')
-  const [origemFiltro, setOrigemFiltro] = useState<'todos' | 'posvendas' | 'leads'>('todos')
+  const [responsavelFiltro, setResponsavelFiltro] = useState('')
+  const [origemFiltro, setOrigemFiltro] = useState<
+    'todos' | 'posvendas' | 'leads'
+  >('todos')
   const [ordenarPorProximidade, setOrdenarPorProximidade] = useState(false)
 
   const [modalVisitaAberto, setModalVisitaAberto] = useState(false)
@@ -56,7 +57,8 @@ export default function PosVendaPage() {
   const [nomeLeadInicial, setNomeLeadInicial] = useState('')
 
   const [detalheAberto, setDetalheAberto] = useState(false)
-  const [comercioSelecionado, setComercioSelecionado] = useState<Comercio | null>(null)
+  const [comercioSelecionado, setComercioSelecionado] =
+    useState<Comercio | null>(null)
   const [historicoDetalhe, setHistoricoDetalhe] = useState<HistoricoItem[]>([])
   const [carregandoHistorico, setCarregandoHistorico] = useState(false)
 
@@ -146,6 +148,7 @@ export default function PosVendaPage() {
     data_proximo_contato: string | null
     produtos_negociando: string[]
     obs_crm: string | null
+    vendedor_responsavel: string | null
   }) {
     await atualizarPosVisita(sb, payload.comercioId, {
       status_crm: payload.status_crm,
@@ -156,6 +159,7 @@ export default function PosVendaPage() {
           ? payload.produtos_negociando
           : null,
       obs_crm: payload.obs_crm,
+      vendedor_responsavel: payload.vendedor_responsavel,
     })
 
     await recarregarDados()
@@ -229,6 +233,7 @@ export default function PosVendaPage() {
       longitude: glo ?? null,
       ativo: true,
       data_ultimo_contato: dataHojeIso(),
+      vendedor_responsavel: payload.responsavel || null,
     })
 
     await registrarVisita(sb, {
@@ -288,7 +293,13 @@ export default function PosVendaPage() {
         (origemFiltro === 'leads' && c.tipo_origem === 'lead') ||
         (origemFiltro === 'posvendas' && c.tipo_origem !== 'lead')
 
-      return nomeOk && statusOk && origemOk
+      const responsavelOk =
+        !responsavelFiltro ||
+        (c.vendedor_responsavel || '')
+          .toLowerCase()
+          .includes(responsavelFiltro.toLowerCase())
+
+      return nomeOk && statusOk && origemOk && responsavelOk
     })
     .sort((a, b) => {
       if (
@@ -381,9 +392,7 @@ export default function PosVendaPage() {
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-        {ab === 'dashboard' && (
-          <DashboardCrm comercios={cs} visitas={vs} />
-        )}
+        {ab === 'dashboard' && <DashboardCrm comercios={cs} visitas={vs} />}
 
         {ab === 'lista' && (
           <>
@@ -394,6 +403,8 @@ export default function PosVendaPage() {
               onOrigemChange={setOrigemFiltro}
               statusFiltro={statusFiltro}
               onStatusChange={setStatusFiltro}
+              responsavelFiltro={responsavelFiltro}
+              onResponsavelChange={setResponsavelFiltro}
               ordenarPorProximidade={ordenarPorProximidade}
               onOrdenarPorProximidadeChange={setOrdenarPorProximidade}
               temLocalizacao={!!(gla && glo)}
