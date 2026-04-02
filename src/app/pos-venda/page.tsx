@@ -163,7 +163,8 @@ export default function PosVendaPage() {
   })
 
   await recarregarDados()
-}
+})
+  }
   async function salvarVisita(payload: {
     comercioId: string
     nome_fantasia: string
