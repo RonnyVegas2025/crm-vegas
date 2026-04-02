@@ -1,5 +1,6 @@
 export interface Comercio {
   id: string
+  vendedor_responsavel?: string | null
   nome_fantasia: string
   razao_social: string
   endereco: string
