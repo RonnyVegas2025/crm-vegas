@@ -38,6 +38,7 @@ interface ModalDetalheComercioProps {
     data_proximo_contato: string | null
     produtos_negociando: string[]
     obs_crm: string | null
+    vendedor_responsavel: string | null
   }) => Promise<void>
 }
 
@@ -59,6 +60,7 @@ export default function ModalDetalheComercio({
   const [negCom, setNegCom] = useState<Record<number, NegItem>>({})
   const [obsGeral, setObsGeral] = useState('')
   const [proximoContato, setProximoContato] = useState('')
+  const [responsavel, setResponsavel] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   useEffect(() => {
@@ -66,6 +68,7 @@ export default function ModalDetalheComercio({
 
     setObsGeral(comercio.obs_crm || '')
     setProximoContato(comercio.data_proximo_contato || '')
+    setResponsavel(comercio.vendedor_responsavel || '')
     setPsEmp([])
     setPsCom([])
     setNegEmp({})
@@ -149,6 +152,7 @@ export default function ModalDetalheComercio({
         data_proximo_contato: proximoContato || null,
         produtos_negociando: produtosSelecionados,
         obs_crm: observacaoFinal || null,
+        vendedor_responsavel: responsavel || null,
       })
 
       alert('Negociação salva com sucesso.')
@@ -289,6 +293,19 @@ export default function ModalDetalheComercio({
                   📍 {formatarDistancia(comercio.distancia)}
                 </span>
               )}
+
+              <span
+                style={{
+                  background: '#eff6ff',
+                  color: '#2563eb',
+                  fontSize: 10.5,
+                  fontWeight: 600,
+                  padding: '2px 8px',
+                  borderRadius: 20,
+                }}
+              >
+                👤 {comercio.vendedor_responsavel || 'Sem responsável'}
+              </span>
             </div>
           </div>
 
@@ -385,92 +402,6 @@ export default function ModalDetalheComercio({
         <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
           {abaDetalhe === 'negociacao' && (
             <div style={{ padding: '14px 18px 28px' }}>
-              {comercio.produtos_negociando &&
-                comercio.produtos_negociando.length > 0 && (
-                  <div
-                    style={{
-                      background: '#fffbeb',
-                      border: '1px solid #fcd34d',
-                      borderRadius: 10,
-                      padding: '11px 13px',
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10.5,
-                        fontWeight: 700,
-                        color: '#92400e',
-                        marginBottom: 5,
-                        textTransform: 'uppercase',
-                        letterSpacing: '.5px',
-                      }}
-                    >
-                      🔥 Em negociação
-                    </div>
-
-                    <div style={{ fontSize: 12.5, color: '#374151' }}>
-                      {Array.isArray(comercio.produtos_negociando)
-                        ? comercio.produtos_negociando.join(', ')
-                        : comercio.produtos_negociando}
-                    </div>
-
-                    {comercio.obs_crm && (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: '#6b7280',
-                          marginTop: 5,
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        "{comercio.obs_crm}"
-                      </div>
-                    )}
-                  </div>
-                )}
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 10,
-                  marginBottom: 14,
-                }}
-              >
-                {[
-                  { l: 'Endereço', v: comercio.endereco || '—' },
-                  { l: 'Contrato', v: comercio.contrato || '—' },
-                  { l: 'Segmento', v: comercio.subgrupo || '—' },
-                  { l: 'E-mail', v: comercio.email || '—' },
-                ].map((f) => (
-                  <div key={f.l}>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#6b7280',
-                        textTransform: 'uppercase',
-                        letterSpacing: '.5px',
-                        marginBottom: 4,
-                      }}
-                    >
-                      {f.l}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 500,
-                        color: '#111827',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {f.v}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
               <div
                 style={{
                   display: 'grid',
@@ -522,22 +453,24 @@ export default function ModalDetalheComercio({
                       display: 'block',
                     }}
                   >
-                    Status atual
+                    Responsável
                   </label>
-                  <div
+                  <input
+                    type="text"
+                    value={responsavel}
+                    onChange={(e) => setResponsavel(e.target.value)}
+                    placeholder="Nome do vendedor"
                     style={{
                       width: '100%',
                       padding: '9px 12px',
                       border: '1.5px solid #e8eaed',
                       borderRadius: 8,
                       fontSize: 13,
+                      fontFamily: 'inherit',
+                      outline: 'none',
                       background: '#f4f5f7',
-                      color: '#374151',
-                      fontWeight: 600,
                     }}
-                  >
-                    {statusVisual(comercio.status_crm || 'ativo').label}
-                  </div>
+                  />
                 </div>
               </div>
 
@@ -616,156 +549,6 @@ export default function ModalDetalheComercio({
                     )
                   })}
                 </div>
-
-                {psCom.length > 0 && (
-                  <div
-                    style={{
-                      background: '#eff6ff',
-                      border: '1px solid #dbeafe',
-                      borderRadius: 9,
-                      padding: '11px 13px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: '#1d4ed8',
-                        marginBottom: 8,
-                      }}
-                    >
-                      💰 Detalhes da negociação
-                    </div>
-
-                    {psCom.map((id) => {
-                      const p = PRODS_COM.find((x) => x.id === id)
-                      if (!p) return null
-                      const n = negCom[id] || { valor: '', obs: '' }
-
-                      return (
-                        <div
-                          key={id}
-                          style={{
-                            marginBottom: 10,
-                            paddingBottom: 10,
-                            borderBottom: '1px solid #dbeafe',
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#374151',
-                              marginBottom: 6,
-                            }}
-                          >
-                            {p.icon} {p.nome}
-                          </div>
-
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr',
-                              gap: 7,
-                            }}
-                          >
-                            <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
-                                {p.tipo === 'taxa'
-                                  ? 'Taxa adm. negociada (%)'
-                                  : 'Valor negociado'}
-                              </label>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 4,
-                                }}
-                              >
-                                <input
-                                  type="text"
-                                  value={n.valor}
-                                  onChange={(e) =>
-                                    updNegCom(id, 'valor', e.target.value)
-                                  }
-                                  placeholder={
-                                    p.tipo === 'taxa' ? 'Ex: 3,50' : 'Ex: 200,00'
-                                  }
-                                  style={{
-                                    padding: '7px 10px',
-                                    border: '1.5px solid #e8eaed',
-                                    borderRadius: 7,
-                                    fontSize: 12.5,
-                                    fontFamily: 'inherit',
-                                    outline: 'none',
-                                    background: '#f4f5f7',
-                                    width: '100%',
-                                  }}
-                                />
-                                {p.tipo === 'taxa' && (
-                                  <span
-                                    style={{
-                                      fontSize: 14,
-                                      fontWeight: 700,
-                                      color: '#2563eb',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    %
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
-                                Observação
-                              </label>
-                              <input
-                                type="text"
-                                value={n.obs}
-                                onChange={(e) =>
-                                  updNegCom(id, 'obs', e.target.value)
-                                }
-                                placeholder="Ex: mensal, com carência..."
-                                style={{
-                                  padding: '7px 10px',
-                                  border: '1.5px solid #e8eaed',
-                                  borderRadius: 7,
-                                  fontSize: 12.5,
-                                  fontFamily: 'inherit',
-                                  outline: 'none',
-                                  background: '#f4f5f7',
-                                  width: '100%',
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
               </div>
 
               <div style={{ marginBottom: 14 }}>
@@ -842,199 +625,10 @@ export default function ModalDetalheComercio({
                                 {p.desc}
                               </div>
                             </div>
-                            {sl && (
-                              <span
-                                style={{
-                                  color: '#16a34a',
-                                  fontSize: 12,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                ✓
-                              </span>
-                            )}
                           </div>
                         )
                       })}
                     </div>
-
-                    {PRODS_EMP.filter(
-                      (p) => p.cat === cat && psEmp.includes(p.id)
-                    ).map((p) => {
-                      const n = negEmp[p.id] || { func: '', vlr: '', obs: '' }
-                      return (
-                        <div
-                          key={p.id}
-                          style={{
-                            background: '#f0fdf4',
-                            border: '1px solid #86efac',
-                            borderRadius: 8,
-                            padding: '10px 12px',
-                            marginTop: 5,
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: '#15803d',
-                              marginBottom: 7,
-                            }}
-                          >
-                            {p.icon} {p.nome} — negociação
-                          </div>
-
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: '1fr 1fr 1fr',
-                              gap: 7,
-                              marginBottom: 7,
-                            }}
-                          >
-                            <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
-                                Nº funcionários
-                              </label>
-                              <input
-                                type="number"
-                                value={n.func}
-                                onChange={(e) =>
-                                  updNegEmp(p.id, 'func', e.target.value)
-                                }
-                                placeholder="0"
-                                style={{
-                                  padding: '7px 10px',
-                                  border: '1.5px solid #e8eaed',
-                                  borderRadius: 7,
-                                  fontSize: 12.5,
-                                  fontFamily: 'inherit',
-                                  outline: 'none',
-                                  background: '#f4f5f7',
-                                  width: '100%',
-                                }}
-                              />
-                            </div>
-
-                            <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
-                                {p.tipo === 'agregado'
-                                  ? 'Valor/licença'
-                                  : 'Valor/pessoa'}
-                              </label>
-                              <input
-                                type="text"
-                                value={n.vlr}
-                                onChange={(e) =>
-                                  updNegEmp(p.id, 'vlr', e.target.value)
-                                }
-                                placeholder="R$ 0,00"
-                                style={{
-                                  padding: '7px 10px',
-                                  border: '1.5px solid #e8eaed',
-                                  borderRadius: 7,
-                                  fontSize: 12.5,
-                                  fontFamily: 'inherit',
-                                  outline: 'none',
-                                  background: '#f4f5f7',
-                                  width: '100%',
-                                }}
-                              />
-                            </div>
-
-                            <div>
-                              <label
-                                style={{
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                  color: '#6b7280',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '.5px',
-                                  marginBottom: 4,
-                                  display: 'block',
-                                }}
-                              >
-                                Total/mês
-                              </label>
-                              <div
-                                style={{
-                                  padding: '7px 10px',
-                                  border: '1.5px solid #e8eaed',
-                                  borderRadius: 7,
-                                  fontSize: 12.5,
-                                  fontFamily: 'inherit',
-                                  outline: 'none',
-                                  width: '100%',
-                                  background: '#dcfce7',
-                                  color: '#15803d',
-                                  fontWeight: 700,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                }}
-                              >
-                                {n.func && n.vlr
-                                  ? calcularTotal(n.func, n.vlr)
-                                  : '—'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div>
-                            <label
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 700,
-                                color: '#6b7280',
-                                textTransform: 'uppercase',
-                                letterSpacing: '.5px',
-                                marginBottom: 4,
-                                display: 'block',
-                              }}
-                            >
-                              Observação
-                            </label>
-                            <input
-                              type="text"
-                              value={n.obs}
-                              onChange={(e) =>
-                                updNegEmp(p.id, 'obs', e.target.value)
-                              }
-                              placeholder="Ex: começa em abril, incluir dependentes..."
-                              style={{
-                                padding: '7px 10px',
-                                border: '1.5px solid #e8eaed',
-                                borderRadius: 7,
-                                fontSize: 12.5,
-                                fontFamily: 'inherit',
-                                outline: 'none',
-                                background: '#f4f5f7',
-                                width: '100%',
-                              }}
-                            />
-                          </div>
-                        </div>
-                      )
-                    })}
                   </div>
                 ))}
               </div>
@@ -1106,117 +700,99 @@ export default function ModalDetalheComercio({
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>
                     Nenhuma interação registrada
                   </div>
-                  <div style={{ fontSize: 12 }}>
-                    As visitas e negociações aparecerão aqui conforme forem sendo salvas.
-                  </div>
                 </div>
               ) : (
-                <>
+                historico.map((h, i) => (
                   <div
+                    key={h.id}
                     style={{
-                      fontSize: 12,
-                      color: '#6b7280',
-                      marginBottom: 12,
-                      fontWeight: 500,
+                      background: '#fff',
+                      border: '1px solid #e8eaed',
+                      borderRadius: 12,
+                      padding: '13px 15px',
+                      marginBottom: 10,
+                      borderLeft: `3px solid ${
+                        RES_COR[h.resultado]?.replace('f', 'c') || '#e8eaed'
+                      }`,
                     }}
                   >
-                    {historico.length} interação
-                    {historico.length !== 1 ? 'ões' : ''} registrada
-                    {historico.length !== 1 ? 's' : ''}
-                  </div>
-
-                  {historico.map((h, i) => (
                     <div
-                      key={h.id}
                       style={{
-                        background: '#fff',
-                        border: '1px solid #e8eaed',
-                        borderRadius: 12,
-                        padding: '13px 15px',
-                        marginBottom: 10,
-                        borderLeft: `3px solid ${
-                          RES_COR[h.resultado]?.replace('f', 'c') || '#e8eaed'
-                        }`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginBottom: h.observacao ? 8 : 0,
                       }}
                     >
                       <div
                         style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 9,
+                          background: RES_COR[h.resultado] || '#f4f5f7',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 10,
-                          marginBottom: h.observacao ? 8 : 0,
+                          justifyContent: 'center',
+                          fontSize: 16,
+                          flexShrink: 0,
                         }}
                       >
-                        <div
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 9,
-                            background: RES_COR[h.resultado] || '#f4f5f7',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: 16,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {RES_ICON[h.resultado] || '📋'}
-                        </div>
-
-                        <div style={{ flex: 1 }}>
-                          <div
-                            style={{
-                              fontWeight: 700,
-                              fontSize: 13,
-                              color: '#111827',
-                            }}
-                          >
-                            {RES_LABEL[h.resultado] || h.resultado}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: '#9ca3af',
-                              marginTop: 1,
-                            }}
-                          >
-                            {formatarDataHora(h.data_visita)}
-                          </div>
-                        </div>
-
-                        {i === 0 && (
-                          <span
-                            style={{
-                              background: '#eff6ff',
-                              color: '#2563eb',
-                              fontSize: 9.5,
-                              fontWeight: 700,
-                              padding: '2px 7px',
-                              borderRadius: 10,
-                            }}
-                          >
-                            Mais recente
-                          </span>
-                        )}
+                        {RES_ICON[h.resultado] || '📋'}
                       </div>
 
-                      {h.observacao && (
+                      <div style={{ flex: 1 }}>
                         <div
                           style={{
-                            background: '#f4f5f7',
-                            borderRadius: 8,
-                            padding: '9px 12px',
-                            fontSize: 12,
-                            color: '#374151',
-                            lineHeight: 1.5,
+                            fontWeight: 700,
+                            fontSize: 13,
+                            color: '#111827',
                           }}
                         >
-                          {h.observacao}
+                          {RES_LABEL[h.resultado] || h.resultado}
                         </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            color: '#9ca3af',
+                            marginTop: 1,
+                          }}
+                        >
+                          {formatarDataHora(h.data_visita)}
+                        </div>
+                      </div>
+
+                      {i === 0 && (
+                        <span
+                          style={{
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            fontSize: 9.5,
+                            fontWeight: 700,
+                            padding: '2px 7px',
+                            borderRadius: 10,
+                          }}
+                        >
+                          Mais recente
+                        </span>
                       )}
                     </div>
-                  ))}
-                </>
+
+                    {h.observacao && (
+                      <div
+                        style={{
+                          background: '#f4f5f7',
+                          borderRadius: 8,
+                          padding: '9px 12px',
+                          fontSize: 12,
+                          color: '#374151',
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {h.observacao}
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
             </div>
           )}
