@@ -14,6 +14,7 @@ import MapaCrm from '@/components/crm/MapaCrm'
 import ModalRegistrarVisita from '@/components/crm/ModalRegistrarVisita'
 import ModalNovoLead from '@/components/crm/ModalNovoLead'
 import ModalDetalheComercio from '@/components/crm/ModalDetalheComercio'
+import FiltrosCrm from '@/components/crm/FiltrosCrm'
 
 import type { Comercio, HistoricoItem, Visita } from '@/types/crm'
 import { calcularDistancia, segmentoParaCategoria } from '@/utils/geo'
@@ -43,7 +44,11 @@ export default function PosVendaPage() {
   const [usr, setUsr] = useState<any>(null)
   const [gla, setGla] = useState<number | null>(null)
   const [glo, setGlo] = useState<number | null>(null)
+
   const [statusFiltro, setStatusFiltro] = useState<string>('')
+  const [busca, setBusca] = useState('')
+  const [origemFiltro, setOrigemFiltro] = useState<'todos' | 'posvendas' | 'leads'>('todos')
+  const [ordenarPorProximidade, setOrdenarPorProximidade] = useState(false)
 
   const [modalVisitaAberto, setModalVisitaAberto] = useState(false)
   const [modalLeadAberto, setModalLeadAberto] = useState(false)
@@ -96,7 +101,8 @@ export default function PosVendaPage() {
     setVs(visitas)
 
     if (comercioSelecionado) {
-      const atualizado = comercios.find((c) => c.id === comercioSelecionado.id) || null
+      const atualizado =
+        comercios.find((c) => c.id === comercioSelecionado.id) || null
       setComercioSelecionado(atualizado)
     }
   }
@@ -127,7 +133,9 @@ export default function PosVendaPage() {
     )
 
     if (comercioSelecionado?.id === id) {
-      setComercioSelecionado((prev) => (prev ? { ...prev, status_crm: status } : null))
+      setComercioSelecionado((prev) =>
+        prev ? { ...prev, status_crm: status } : null
+      )
     }
   }
 
@@ -142,7 +150,10 @@ export default function PosVendaPage() {
       status_crm: payload.status_crm,
       data_ultimo_contato: dataHojeIso(),
       data_proximo_contato: payload.data_proximo_contato,
-      produtos_negociando: payload.produtos_negociando.length > 0 ? payload.produtos_negociando : null,
+      produtos_negociando:
+        payload.produtos_negociando.length > 0
+          ? payload.produtos_negociando
+          : null,
       obs_crm: payload.obs_crm,
     })
 
@@ -209,9 +220,10 @@ export default function PosVendaPage() {
       contrato: 'Lead',
       status_crm: 'novo_lead',
       tipo_origem: 'lead',
-      obs_crm: [payload.responsavel ? `Resp: ${payload.responsavel}` : '', payload.observacao]
-        .filter(Boolean)
-        .join(' | ') || null,
+      obs_crm:
+        [payload.responsavel ? `Resp: ${payload.responsavel}` : '', payload.observacao]
+          .filter(Boolean)
+          .join(' | ') || null,
       latitude: gla ?? null,
       longitude: glo ?? null,
       ativo: true,
@@ -225,7 +237,9 @@ export default function PosVendaPage() {
       latitude: gla ?? null,
       longitude: glo ?? null,
       resultado: 'contato',
-      observacao: `Novo lead${payload.responsavel ? ` | Resp: ${payload.responsavel}` : ''}${payload.observacao ? ` | ${payload.observacao}` : ''}`,
+      observacao: `Novo lead${
+        payload.responsavel ? ` | Resp: ${payload.responsavel}` : ''
+      }${payload.observacao ? ` | ${payload.observacao}` : ''}`,
       data_visita: new Date().toISOString(),
     })
 
@@ -244,15 +258,48 @@ export default function PosVendaPage() {
     ? {
         ...comercioSelecionado,
         distancia:
-          gla && glo && comercioSelecionado.latitude && comercioSelecionado.longitude
-            ? calcularDistancia(gla, glo, comercioSelecionado.latitude, comercioSelecionado.longitude)
+          gla &&
+          glo &&
+          comercioSelecionado.latitude &&
+          comercioSelecionado.longitude
+            ? calcularDistancia(
+                gla,
+                glo,
+                comercioSelecionado.latitude,
+                comercioSelecionado.longitude
+              )
             : comercioSelecionado.distancia,
       }
     : null
 
-  const comerciosFiltrados = statusFiltro
-    ? comerciosComDistancia.filter((c) => (c.status_crm || 'ativo') === statusFiltro)
-    : comerciosComDistancia
+  const comerciosFiltrados = comerciosComDistancia
+    .filter((c) => {
+      const nomeOk =
+        !busca ||
+        c.nome_fantasia.toLowerCase().includes(busca.toLowerCase()) ||
+        (c.razao_social || '').toLowerCase().includes(busca.toLowerCase())
+
+      const statusOk =
+        !statusFiltro || (c.status_crm || 'ativo') === statusFiltro
+
+      const origemOk =
+        origemFiltro === 'todos' ||
+        (origemFiltro === 'leads' && c.tipo_origem === 'lead') ||
+        (origemFiltro === 'posvendas' && c.tipo_origem !== 'lead')
+
+      return nomeOk && statusOk && origemOk
+    })
+    .sort((a, b) => {
+      if (
+        ordenarPorProximidade &&
+        a.distancia != null &&
+        b.distancia != null
+      ) {
+        return a.distancia - b.distancia
+      }
+
+      return a.nome_fantasia.localeCompare(b.nome_fantasia)
+    })
 
   const totalLeads = cs.filter((c) => c.tipo_origem === 'lead').length
   const totalPv = cs.filter((c) => c.tipo_origem !== 'lead').length
@@ -306,41 +353,17 @@ export default function PosVendaPage() {
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
         {ab === 'lista' && (
           <>
-            {statusFiltro && (
-              <div
-                style={{
-                  background: '#fff',
-                  border: '1px solid #e8eaed',
-                  borderRadius: 10,
-                  padding: '10px 12px',
-                  marginBottom: 12,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 10,
-                }}
-              >
-                <div style={{ fontSize: 12.5, color: '#374151' }}>
-                  Filtro ativo no funil: <b>{statusFiltro}</b>
-                </div>
-
-                <button
-                  onClick={() => setStatusFiltro('')}
-                  style={{
-                    background: '#f4f5f7',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: 8,
-                    padding: '6px 10px',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    color: '#374151',
-                  }}
-                >
-                  Limpar filtro
-                </button>
-              </div>
-            )}
+            <FiltrosCrm
+              busca={busca}
+              onBuscaChange={setBusca}
+              origemFiltro={origemFiltro}
+              onOrigemChange={setOrigemFiltro}
+              statusFiltro={statusFiltro}
+              onStatusChange={setStatusFiltro}
+              ordenarPorProximidade={ordenarPorProximidade}
+              onOrdenarPorProximidadeChange={setOrdenarPorProximidade}
+              temLocalizacao={!!(gla && glo)}
+            />
 
             <ListaComercios
               comercios={comerciosFiltrados}
