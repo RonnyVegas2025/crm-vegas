@@ -142,29 +142,28 @@ export default function PosVendaPage() {
     }
   }
 
-  async function salvarNegociacao(payload: {
-    comercioId: string
-    status_crm: string
-    data_proximo_contato: string | null
-    produtos_negociando: string[]
-    obs_crm: string | null
-    vendedor_responsavel: string | null
-  }) {
-    await atualizarPosVisita(sb, payload.comercioId, {
-      status_crm: payload.status_crm,
-      data_ultimo_contato: dataHojeIso(),
-      data_proximo_contato: payload.data_proximo_contato,
-      produtos_negociando:
-        payload.produtos_negociando.length > 0
-          ? payload.produtos_negociando
-          : null,
-      obs_crm: payload.obs_crm,
-      vendedor_responsavel: payload.vendedor_responsavel,
-    })
+ async function salvarNegociacao(payload: {
+  comercioId: string
+  status_crm: string
+  data_proximo_contato: string | null
+  produtos_negociando: string[]
+  obs_crm: string | null
+  vendedor_responsavel: string | null
+}) {
+  await atualizarPosVisita(sb, payload.comercioId, {
+    status_crm: payload.status_crm,
+    data_ultimo_contato: dataHojeIso(),
+    data_proximo_contato: payload.data_proximo_contato,
+    produtos_negociando:
+      payload.produtos_negociando.length > 0
+        ? payload.produtos_negociando
+        : null,
+    obs_crm: payload.obs_crm,
+    vendedor_responsavel: payload.vendedor_responsavel,
+  })
 
-    await recarregarDados()
-  }
-
+  await recarregarDados()
+}
   async function salvarVisita(payload: {
     comercioId: string
     nome_fantasia: string
