@@ -15,6 +15,7 @@ import ModalRegistrarVisita from '@/components/crm/ModalRegistrarVisita'
 import ModalNovoLead from '@/components/crm/ModalNovoLead'
 import ModalDetalheComercio from '@/components/crm/ModalDetalheComercio'
 import FiltrosCrm from '@/components/crm/FiltrosCrm'
+import DashboardCrm from '@/components/crm/DashboardCrm'
 
 import type { Comercio, HistoricoItem, Visita } from '@/types/crm'
 import { calcularDistancia, segmentoParaCategoria } from '@/utils/geo'
@@ -40,7 +41,7 @@ export default function PosVendaPage() {
   const [cs, setCs] = useState<Comercio[]>([])
   const [vs, setVs] = useState<Visita[]>([])
   const [lo, setLo] = useState(true)
-  const [ab, setAb] = useState<'lista' | 'pipeline' | 'mapa' | 'historico'>('lista')
+  const [ab, setAb] = useState<'lista' | 'pipeline' | 'mapa' | 'historico' | 'dashboard'>('dashboard')
   const [usr, setUsr] = useState<any>(null)
   const [gla, setGla] = useState<number | null>(null)
   const [glo, setGlo] = useState<number | null>(null)
@@ -343,14 +344,47 @@ export default function PosVendaPage() {
         fechados={cs.filter((c) => c.status_crm === 'fechado').length}
       />
 
-      <TabsCrm
-        abaAtual={ab}
-        totalLista={comerciosFiltrados.length}
-        totalHoje={vs.length}
-        onChange={setAb}
-      />
+      <div
+        style={{
+          background: '#fff',
+          borderBottom: '1px solid #e8eaed',
+          display: 'flex',
+          padding: '0 18px',
+          flexShrink: 0,
+          overflowX: 'auto',
+        }}
+      >
+        {[
+          { k: 'dashboard', l: '📈 Dashboard' },
+          { k: 'lista', l: `📋 Lista (${comerciosFiltrados.length})` },
+          { k: 'pipeline', l: '📊 Pipeline' },
+          { k: 'mapa', l: '🗺 Mapa' },
+          { k: 'historico', l: `✅ Hoje (${vs.length})` },
+        ].map((t) => (
+          <div
+            key={t.k}
+            onClick={() => setAb(t.k as any)}
+            style={{
+              padding: '10px 16px',
+              fontSize: 12.5,
+              fontWeight: 600,
+              cursor: 'pointer',
+              color: ab === t.k ? '#2563eb' : '#6b7280',
+              borderBottom: `2px solid ${ab === t.k ? '#2563eb' : 'transparent'}`,
+              marginBottom: -1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t.l}
+          </div>
+        ))}
+      </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+        {ab === 'dashboard' && (
+          <DashboardCrm comercios={cs} visitas={vs} />
+        )}
+
         {ab === 'lista' && (
           <>
             <FiltrosCrm
